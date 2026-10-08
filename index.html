@@ -100,7 +100,7 @@ nav.tabs a:focus-visible,button:focus-visible,input:focus-visible{outline:2px so
 
 
 <header class="top"><div class="wrap">
-  <div class="brand"><h1 id="app-name">好朋友地圖</h1><span>公衛學院試辦・掃碼回報生理用品</span></div>
+  <div class="brand"><h1 id="app-name">好朋友地圖</h1><span>公衛學院大樓 1–7 樓・掃碼回報生理用品</span></div>
   <nav class="tabs">
     <a href="#map" id="tab-map">即時總覽</a>
     <a href="#qr" id="tab-qr">各點 QR 碼</a>
@@ -117,17 +117,18 @@ const CONFIG={
 };
 // 補給點清單：實地確認後修改。id 會出現在 QR Code 網址裡，貼出去後就不要再改
 const LOCS=[
-  {id:"cph-1f",bldg:"1 樓",spot:"女廁",src:"學院"},
-  {id:"cph-2f",bldg:"2 樓",spot:"女廁",src:"學院"},
-  {id:"cph-3f",bldg:"3 樓",spot:"女廁",src:"學院"},
-  {id:"cph-4f",bldg:"4 樓",spot:"女廁",src:"學院"},
-  {id:"cph-5f",bldg:"5 樓",spot:"女廁",src:"學院"},
-  {id:"cph-lounge",bldg:"1 樓",spot:"學生休息區互助盒",src:"互助"}
+  {id:"cph-1f",bldg:"1 樓",unit:"行政辦公、大型教室、公衛系學生活動室",spot:"女廁",src:"學院"},
+  {id:"cph-2f",bldg:"2 樓",unit:"教室、電腦教室、研討室",spot:"女廁",src:"學院"},
+  {id:"cph-3f",bldg:"3 樓",unit:"物理治療學系",spot:"女廁",src:"學院"},
+  {id:"cph-4f",bldg:"4 樓",unit:"職能治療學系",spot:"女廁",src:"學院"},
+  {id:"cph-5f",bldg:"5 樓",unit:"流行病學與預防醫學研究所",spot:"女廁",src:"學院"},
+  {id:"cph-6f",bldg:"6 樓",unit:"健康政策與管理研究所、健康行為與社區科學研究所",spot:"女廁",src:"學院"},
+  {id:"cph-7f",bldg:"7 樓",unit:"環境與職業健康科學研究所",spot:"女廁",src:"學院"}
 ];
 const LEVEL={full:{t:"充足",d:"盒內還有很多",cls:"s-full"},low:{t:"剩少量",d:"只剩幾片",cls:"s-low"},empty:{t:"已用完",d:"盒子是空的",cls:"s-empty"}};
 const KINDS=["日用","夜用","護墊","棉條"];
 const STALE_H=6, CONFLICT_MIN=60, COOLDOWN_MIN=5;
-const KEY="periodpal-demo-v1";
+const KEY="periodpal-demo-v2";
 const MIN=60e3, H=60*MIN;
 
 function seed(){const n=Date.now();return[
@@ -136,7 +137,8 @@ function seed(){const n=Date.now();return[
   {loc:"cph-3f",lv:"low",at:n-25*MIN},{loc:"cph-3f",lv:"full",at:n-5*H},
   {loc:"cph-4f",lv:"empty",at:n-20*MIN},{loc:"cph-4f",lv:"full",at:n-35*MIN},
   {loc:"cph-5f",lv:"full",at:n-9*H},
-  {loc:"cph-lounge",lv:"low",at:n-70*MIN}
+  {loc:"cph-6f",lv:"full",at:n-50*MIN},
+  {loc:"cph-7f",lv:"low",at:n-70*MIN}
 ].map(r=>({...r,demo:true}))}
 let reports;
 try{reports=JSON.parse(localStorage.getItem(KEY))}catch(e){}
@@ -178,8 +180,8 @@ function viewMap(){
 function groups(st){
   if(!st.length)return[h("p",{class:"note"},"目前沒有回報有庫存的地點。可以切回「全部地點」看待確認的點。")];
   const by={};st.forEach(x=>(by[x.l.bldg]??=[]).push(x));
-  return Object.entries(by).sort((a,b)=>Math.min(...a[1].map(x=>x.s.rank))-Math.min(...b[1].map(x=>x.s.rank)))
-    .map(([b,xs])=>h("section",{class:"group"},h("h2",{},b),h("div",{class:"list"},...xs.sort((p,q)=>p.s.rank-q.s.rank).map(({l,s})=>
+  return Object.entries(by)
+    .map(([b,xs])=>h("section",{class:"group"},h("h2",{},b+(xs[0].l.unit?"・"+xs[0].l.unit:"")),h("div",{class:"list"},...xs.sort((p,q)=>p.s.rank-q.s.rank).map(({l,s})=>
       h("div",{class:"row "+s.cls},h("span",{class:"dot","aria-hidden":"true"}),
         h("div",{class:"meta"},h("div",{class:"name"},l.spot),
           h("div",{class:"sub"},s.rs.length?h("span",{class:"t"},ago(s.rs[0].at)):"還沒有人回報"," ・ "+l.src+"提供"),
@@ -204,7 +206,7 @@ function viewReport(id){
       h("a",{class:"link",href:"#map"},"看看其他地點")));
   });
   app.replaceChildren(h("div",{class:"rep"},
-    h("h2",{},l.bldg),h("p",{class:"where"},l.spot+"・"+l.src+"提供"),
+    h("h2",{},l.bldg),h("p",{class:"where"},l.spot+"・"+(l.unit||l.src+"提供")),
     h("p",{class:"now"},s.rs.length?"目前顯示「"+s.label+"」，最後回報 "+ago(s.rs[0].at):"這裡還沒有人回報過"),
     h("p",{class:"q"},"這個點現在的狀況？"),h("div",{class:"choices"},...choices),
     h("p",{class:"q"},"有哪些種類？（選填）"),
