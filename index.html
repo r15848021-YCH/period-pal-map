@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>好朋友地圖</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=IBM+Plex+Mono:wght@500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+html{-webkit-text-size-adjust:100%}body{margin:0}[hidden]{display:none!important}
+/* Layout: one narrow phone-first column; three hash views (總覽 / 掃碼回報 / QR 碼) under a sticky tab bar */
+:root{
+  --bg:#f6f4f7; --surface:#ffffff; --fg:#231c2b; --muted:#6c6375; --line:#e3dde8;
+  --accent:#8a2f62; --accent-ink:#ffffff; --accent-soft:#f5e6ef;
+  --ok:#1f7a4d; --ok-soft:#e1f2e8; --low:#a35d00; --low-soft:#fbeed8; --out:#b3261e; --out-soft:#fbe3e1;
+  --unk:#5d6470; --unk-soft:#eceef1;
+  --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#17131b; --surface:#221c28; --fg:#f1ebf4; --muted:#a79daf; --line:#372e3e;
+  --accent:#e889bb; --accent-ink:#2a0e1d; --accent-soft:#3a2231;
+  --ok:#6fd39c; --ok-soft:#173326; --low:#f2b25a; --low-soft:#3a2a12; --out:#ff8a80; --out-soft:#3d1a18;
+  --unk:#b4bac4; --unk-soft:#2a2b31; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#17131b; --surface:#221c28; --fg:#f1ebf4; --muted:#a79daf; --line:#372e3e;
+  --accent:#e889bb; --accent-ink:#2a0e1d; --accent-soft:#3a2231;
+  --ok:#6fd39c; --ok-soft:#173326; --low:#f2b25a; --low-soft:#3a2a12; --out:#ff8a80; --out-soft:#3d1a18;
+  --unk:#b4bac4; --unk-soft:#2a2b31; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.6}
+.wrap{max-width:560px;margin:0 auto;padding-inline:16px;padding-block:0 48px}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.top .wrap{padding-block:12px 0;display:flex;flex-direction:column;gap:10px}
+.brand{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.brand h1{margin:0;font-size:20px;font-weight:900;letter-spacing:.02em;text-wrap:balance}
+.brand span{color:var(--muted);font-size:12px}
+nav.tabs{display:flex;gap:4px}
+nav.tabs a{padding:8px 12px;color:var(--muted);text-decoration:none;font-weight:500;border-bottom:3px solid transparent}
+nav.tabs a[aria-current="page"]{color:var(--accent);border-color:var(--accent)}
+nav.tabs a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.demo{margin-top:16px;padding:10px 12px;border-radius:8px;background:var(--accent-soft);font-size:13px;color:var(--fg)}
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}
+.stat{padding:10px 12px;border-radius:10px;background:var(--surface);border:1px solid var(--line)}
+.stat b{display:block;font-size:24px;font-variant-numeric:tabular-nums;line-height:1.2}
+.stat small{color:var(--muted);font-size:12px}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.chipbtn{font:inherit;font-size:13px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
+.chipbtn[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.group{margin-top:20px}
+.group h2{font-size:13px;letter-spacing:.08em;color:var(--muted);margin:0 0 8px;font-weight:700}
+.list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden}
+.row{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px 14px;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.dot{width:10px;height:10px;border-radius:50%}
+.row .meta{min-width:0}
+.row .name{font-weight:700}
+.row .sub{color:var(--muted);font-size:12px}
+.row .sub .t{font-family:var(--f-mono);font-size:11.5px}
+.pill{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px;white-space:nowrap}
+.s-full{--c:var(--ok);--cs:var(--ok-soft)} .s-low{--c:var(--low);--cs:var(--low-soft)}
+.s-empty{--c:var(--out);--cs:var(--out-soft)} .s-unk{--c:var(--unk);--cs:var(--unk-soft)}
+.pill{color:var(--c);background:var(--cs)} .dot{background:var(--c)}
+.row a.go{font-size:13px;color:var(--accent);text-decoration:none;font-weight:500}
+.row-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+/* report view */
+.rep h2{font-size:24px;margin:20px 0 0;font-weight:900;text-wrap:balance}
+.rep .where{color:var(--muted);margin:2px 0 0}
+.rep .now{margin-top:12px;font-size:13px;color:var(--muted)}
+.q{margin:24px 0 10px;font-weight:700}
+.choices{display:grid;gap:10px}
+.choice{font:inherit;display:flex;align-items:center;gap:14px;text-align:left;padding:16px;border-radius:12px;border:2px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
+.choice b{font-size:18px}
+.choice small{display:block;color:var(--muted);font-size:13px}
+.choice .dot{width:16px;height:16px;flex:none}
+.choice[aria-pressed="true"]{border-color:var(--c);background:var(--cs)}
+.kinds{display:flex;gap:8px;flex-wrap:wrap}
+.submit{font:inherit;font-weight:700;font-size:16px;width:100%;margin-top:24px;padding:14px;border:0;border-radius:12px;background:var(--accent);color:var(--accent-ink);cursor:pointer}
+.submit:disabled{opacity:.4;cursor:not-allowed}
+.note{color:var(--muted);font-size:12px;margin-top:10px}
+.thanks{margin-top:32px;padding:20px;border-radius:12px;background:var(--surface);border:1px solid var(--line)}
+.thanks h3{margin:0 0 6px;font-size:20px}
+.link{color:var(--accent);font-weight:500}
+/* qr view */
+.field{display:flex;flex-direction:column;gap:6px;margin-top:16px}
+.field input{font:inherit;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg);min-width:0}
+.qrgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:16px}
+.qrcard{padding:12px;border-radius:12px;background:var(--surface);border:1px solid var(--line);display:flex;flex-direction:column;gap:6px;min-width:0}
+.qrbox{background:#fff;padding:8px;border-radius:6px;align-self:center}
+.qrbox img,.qrbox canvas{display:block;width:120px;height:120px}
+.qrcard b{font-size:14px}
+.qrcard code{font-family:var(--f-mono);font-size:10.5px;color:var(--muted);word-break:break-all}
+.reset{font:inherit;font-size:12px;background:none;border:0;color:var(--muted);text-decoration:underline;cursor:pointer;padding:0;margin-top:24px}
+@media (prefers-reduced-motion:no-preference){.choice,.chipbtn{transition:border-color .15s,background .15s}}
+</style>
+</head>
+<body>
+
+
+<header class="top"><div class="wrap">
+  <div class="brand"><h1 id="app-name">好朋友地圖</h1><span>公衛學院試辦・掃碼回報生理用品</span></div>
+  <nav class="tabs">
+    <a href="#map" id="tab-map">即時總覽</a>
+    <a href="#qr" id="tab-qr">各點 QR 碼</a>
+  </nav>
+</div></header>
+<main class="wrap" id="app"></main>
+
+<script>
+// ===== 設定區：上線前只需要改這裡 =====
+const CONFIG={
+  name:"好朋友地圖",
+  // 回報資料要送去的網址（中繼服務，之後接 Notion）。留空 = 示範模式，資料只存在這支手機
+  apiUrl:"",
+};
+// 補給點清單：實地確認後修改。id 會出現在 QR Code 網址裡，貼出去後就不要再改
+const LOCS=[
+  {id:"cph-1f",bldg:"1 樓",spot:"女廁",src:"學院"},
+  {id:"cph-2f",bldg:"2 樓",spot:"女廁",src:"學院"},
+  {id:"cph-3f",bldg:"3 樓",spot:"女廁",src:"學院"},
+  {id:"cph-4f",bldg:"4 樓",spot:"女廁",src:"學院"},
+  {id:"cph-5f",bldg:"5 樓",spot:"女廁",src:"學院"},
+  {id:"cph-lounge",bldg:"1 樓",spot:"學生休息區互助盒",src:"互助"}
+];
+const LEVEL={full:{t:"充足",d:"盒內還有很多",cls:"s-full"},low:{t:"剩少量",d:"只剩幾片",cls:"s-low"},empty:{t:"已用完",d:"盒子是空的",cls:"s-empty"}};
+const KINDS=["日用","夜用","護墊","棉條"];
+const STALE_H=6, CONFLICT_MIN=60, COOLDOWN_MIN=5;
+const KEY="periodpal-demo-v1";
+const MIN=60e3, H=60*MIN;
+
+function seed(){const n=Date.now();return[
+  {loc:"cph-1f",lv:"full",at:n-15*MIN},{loc:"cph-1f",lv:"full",at:n-3*H},
+  {loc:"cph-2f",lv:"empty",at:n-40*MIN},
+  {loc:"cph-3f",lv:"low",at:n-25*MIN},{loc:"cph-3f",lv:"full",at:n-5*H},
+  {loc:"cph-4f",lv:"empty",at:n-20*MIN},{loc:"cph-4f",lv:"full",at:n-35*MIN},
+  {loc:"cph-5f",lv:"full",at:n-9*H},
+  {loc:"cph-lounge",lv:"low",at:n-70*MIN}
+].map(r=>({...r,demo:true}))}
+let reports;
+try{reports=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+if(!Array.isArray(reports))reports=seed();
+function save(){try{localStorage.setItem(KEY,JSON.stringify(reports))}catch(e){}}
+
+function ago(t){const m=Math.round((Date.now()-t)/MIN);if(m<1)return"剛剛";if(m<60)return m+" 分鐘前";const h=Math.floor(m/60);if(h<24)return h+" 小時前";return Math.floor(h/24)+" 天前"}
+
+// 判斷規則：最新一筆為準；與前一筆相隔 60 分鐘內且說法不同 → 待確認；超過 6 小時沒人回報 → 待確認
+function status(id){
+  const rs=reports.filter(r=>r.loc===id).sort((a,b)=>b.at-a.at);
+  if(!rs.length)return{key:"none",label:"尚無回報",cls:"s-unk",rank:3,rs};
+  const [a,b]=rs, age=Date.now()-a.at;
+  if(age>STALE_H*H)return{key:"stale",label:"待確認",why:"超過 "+STALE_H+" 小時沒人回報，上次是「"+LEVEL[a.lv].t+"」",cls:"s-unk",rank:2,rs};
+  if(b&&a.lv!==b.lv&&a.at-b.at<CONFLICT_MIN*MIN&&(a.lv==="empty")!==(b.lv==="empty"))
+    return{key:"conflict",label:"回報不一致",why:"一小時內有人說「"+LEVEL[a.lv].t+"」、有人說「"+LEVEL[b.lv].t+"」",cls:"s-unk",rank:2,rs};
+  const rank={full:0,low:1,empty:4}[a.lv];
+  return{key:a.lv,label:LEVEL[a.lv].t,cls:LEVEL[a.lv].cls,rank,rs};
+}
+
+const app=document.getElementById("app");
+let filter="all";
+function h(tag,attrs={},...kids){const e=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==="class")e.className=v;else if(k.startsWith("on"))e.addEventListener(k.slice(2),v);else e.setAttribute(k,v)}for(const k of kids.flat())if(k!=null)e.append(k);return e}
+
+function viewMap(){
+  const st=LOCS.map(l=>({l,s:status(l.id)}));
+  const n=k=>st.filter(x=>k.includes(x.s.key)).length;
+  app.replaceChildren(
+    reports.some(r=>r.demo)?h("div",{class:"demo"},"目前顯示的是示範資料，方便看效果。你在回報頁送出的資料只存在這支手機的瀏覽器裡。"):null,
+    h("div",{class:"summary"},
+      h("div",{class:"stat"},h("b",{style:"color:var(--ok)"},String(n(["full","low"]))),h("small",{},"點有庫存")),
+      h("div",{class:"stat"},h("b",{style:"color:var(--out)"},String(n(["empty"]))),h("small",{},"點已用完")),
+      h("div",{class:"stat"},h("b",{style:"color:var(--unk)"},String(n(["stale","conflict","none"]))),h("small",{},"點待確認"))),
+    h("div",{class:"filters"},
+      ...[["all","全部地點"],["avail","只看有庫存"]].map(([k,t])=>h("button",{class:"chipbtn","aria-pressed":String(filter===k),onclick:()=>{filter=k;viewMap()}},t))),
+    ...groups(st.filter(x=>filter==="all"||["full","low"].includes(x.s.key)))
+  );
+}
+function groups(st){
+  if(!st.length)return[h("p",{class:"note"},"目前沒有回報有庫存的地點。可以切回「全部地點」看待確認的點。")];
+  const by={};st.forEach(x=>(by[x.l.bldg]??=[]).push(x));
+  return Object.entries(by).sort((a,b)=>Math.min(...a[1].map(x=>x.s.rank))-Math.min(...b[1].map(x=>x.s.rank)))
+    .map(([b,xs])=>h("section",{class:"group"},h("h2",{},b),h("div",{class:"list"},...xs.sort((p,q)=>p.s.rank-q.s.rank).map(({l,s})=>
+      h("div",{class:"row "+s.cls},h("span",{class:"dot","aria-hidden":"true"}),
+        h("div",{class:"meta"},h("div",{class:"name"},l.spot),
+          h("div",{class:"sub"},s.rs.length?h("span",{class:"t"},ago(s.rs[0].at)):"還沒有人回報"," ・ "+l.src+"提供"),
+          s.why?h("div",{class:"sub"},s.why):null),
+        h("div",{class:"row-right"},h("span",{class:"pill"},s.label),h("a",{class:"go",href:"#r-"+l.id},"回報")))))));
+}
+
+function viewReport(id){
+  const l=LOCS.find(x=>x.id===id);
+  if(!l){app.replaceChildren(h("p",{class:"note"},"找不到這個地點，QR 碼可能已經更換。"),h("a",{class:"link",href:"#map"},"回到總覽"));return}
+  let pick=null; const kinds=new Set();
+  const s=status(id);
+  const last=reports.filter(r=>r.loc===id&&r.mine).sort((a,b)=>b.at-a.at)[0];
+  const cooling=last&&Date.now()-last.at<COOLDOWN_MIN*MIN;
+  const btn=h("button",{class:"submit",disabled:""},"送出回報");
+  const choices=Object.entries(LEVEL).map(([k,v])=>h("button",{class:"choice "+v.cls,"aria-pressed":"false",onclick:e=>{pick=k;choices.forEach(c=>c.setAttribute("aria-pressed",String(c===e.currentTarget)));btn.disabled=!!cooling}},
+    h("span",{class:"dot","aria-hidden":"true"}),h("span",{},h("b",{},v.t),h("small",{},v.d))));
+  btn.addEventListener("click",()=>{
+    reports.push({loc:id,lv:pick,kinds:[...kinds],at:Date.now(),mine:true});save();
+    app.replaceChildren(h("div",{class:"thanks"},h("h3",{},"謝謝你的回報"),
+      h("p",{},l.bldg+" "+l.spot+" 現在顯示為「"+status(id).label+"」，下一位同學查得到了。"),
+      h("a",{class:"link",href:"#map"},"看看其他地點")));
+  });
+  app.replaceChildren(h("div",{class:"rep"},
+    h("h2",{},l.bldg),h("p",{class:"where"},l.spot+"・"+l.src+"提供"),
+    h("p",{class:"now"},s.rs.length?"目前顯示「"+s.label+"」，最後回報 "+ago(s.rs[0].at):"這裡還沒有人回報過"),
+    h("p",{class:"q"},"這個點現在的狀況？"),h("div",{class:"choices"},...choices),
+    h("p",{class:"q"},"有哪些種類？（選填）"),
+    h("div",{class:"kinds"},...KINDS.map(k=>h("button",{class:"chipbtn","aria-pressed":"false",onclick:e=>{kinds.has(k)?kinds.delete(k):kinds.add(k);e.currentTarget.setAttribute("aria-pressed",String(kinds.has(k)))}},k))),
+    btn,
+    h("p",{class:"note"},cooling?"你剛剛回報過這裡，"+COOLDOWN_MIN+" 分鐘後可以再回報。":"不需要登入，也不會記錄你的身分。")));
+}
+
+function viewQR(){
+  let base;try{base=localStorage.getItem(KEY+"-base")}catch(e){}
+  base=base||"https://你的網址/";
+  const grid=h("div",{class:"qrgrid"});
+  const input=h("input",{id:"base",type:"url",value:base,spellcheck:"false"});
+  function draw(){
+    const b=input.value.trim().split("#")[0];
+    try{localStorage.setItem(KEY+"-base",b)}catch(e){}
+    grid.replaceChildren(...LOCS.map(l=>{const url=b+"#r-"+l.id;const box=h("div",{class:"qrbox"});
+      if(window.QRCode)new QRCode(box,{text:url,width:240,height:240,correctLevel:QRCode.CorrectLevel.M});else box.append("QR 產生器載入失敗");
+      return h("div",{class:"qrcard"},box,h("b",{},l.bldg+" "+l.spot),h("code",{},url),h("a",{class:"link",href:"#r-"+l.id,style:"font-size:13px"},"預覽回報頁"))}));
+  }
+  input.addEventListener("change",draw);
+  app.replaceChildren(
+    h("p",{class:"note",style:"margin-top:16px;font-size:14px;color:var(--fg)"},"每個補給點一張 QR 碼，貼在置物盒旁邊。同學掃描後會直接打開該點的回報頁，按一下就能送出。"),
+    h("label",{class:"field",for:"base"},h("span",{style:"font-size:13px;font-weight:700"},"網站正式網址"),input,
+      h("span",{class:"note",style:"margin:0"},"上線後改成你們的網址（例如 GitHub Pages），QR 碼會自動更新。")),
+    grid,
+    h("button",{class:"reset",onclick:()=>{reports=seed();save();location.hash="#map"}},"清除我的測試回報，恢復示範資料"));
+  draw();
+}
+
+function route(){
+  const hs=location.hash.slice(1)||"map";
+  document.getElementById("tab-map").toggleAttribute("aria-current",false);
+  document.getElementById("tab-qr").toggleAttribute("aria-current",false);
+  if(hs.startsWith("r-"))viewReport(hs.slice(2));
+  else if(hs==="qr"){document.getElementById("tab-qr").setAttribute("aria-current","page");viewQR()}
+  else{document.getElementById("tab-map").setAttribute("aria-current","page");viewMap()}
+  window.scrollTo(0,0);
+}
+addEventListener("hashchange",route);route();
+</script>
+
+</body>
+</html>
