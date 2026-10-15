@@ -108,28 +108,18 @@ nav.tabs a:focus-visible,button:focus-visible,input:focus-visible{outline:2px so
 </div></header>
 <main class="wrap" id="app"></main>
 
-<script>
+<script type="module">
+import {LEVEL,KINDS,COOLDOWN_MIN,MIN,H,status as rule,ago} from "./rules.js";
 // ===== 設定區：上線前只需要改這裡 =====
 const CONFIG={
   name:"好朋友地圖",
-  // 回報資料要送去的網址（中繼服務，之後接 Notion）。留空 = 示範模式，資料只存在這支手機
-  apiUrl:"",
+  // 回報 API（Cloudflare Worker，與網頁同一個網站）。留空 = 示範模式，資料只存在這支手機
+  apiUrl:"/api",
 };
-// 補給點清單：實地確認後修改。id 會出現在 QR Code 網址裡，貼出去後就不要再改
-const LOCS=[
-  {id:"cph-1f",bldg:"1 樓",unit:"行政辦公、大型教室、公衛系學生活動室",spot:"女廁",src:"學院"},
-  {id:"cph-2f",bldg:"2 樓",unit:"教室、電腦教室、研討室",spot:"女廁",src:"學院"},
-  {id:"cph-3f",bldg:"3 樓",unit:"物理治療學系",spot:"女廁",src:"學院"},
-  {id:"cph-4f",bldg:"4 樓",unit:"職能治療學系",spot:"女廁",src:"學院"},
-  {id:"cph-5f",bldg:"5 樓",unit:"流行病學與預防醫學研究所",spot:"女廁",src:"學院"},
-  {id:"cph-6f",bldg:"6 樓",unit:"健康政策與管理研究所、健康行為與社區科學研究所",spot:"女廁",src:"學院"},
-  {id:"cph-7f",bldg:"7 樓",unit:"環境與職業健康科學研究所",spot:"女廁",src:"學院"}
-];
-const LEVEL={full:{t:"充足",d:"盒內還有很多",cls:"s-full"},low:{t:"剩少量",d:"只剩幾片",cls:"s-low"},empty:{t:"已用完",d:"盒子是空的",cls:"s-empty"}};
-const KINDS=["日用","夜用","護墊","棉條"];
-const STALE_H=6, CONFLICT_MIN=60, COOLDOWN_MIN=5;
+// 補給點清單在 locs.json（網頁與 LINE Bot 共用）。id 會出現在 QR Code 網址裡，貼出去後就不要再改
+const LOCS=await fetch("./locs.json").then(r=>r.json());
+const LIVE=!!CONFIG.apiUrl;
 const KEY="periodpal-demo-v2";
-const MIN=60e3, H=60*MIN;
 
 function seed(){const n=Date.now();return[
   {loc:"cph-1f",lv:"full",at:n-15*MIN},{loc:"cph-1f",lv:"full",at:n-3*H},
@@ -140,34 +130,37 @@ function seed(){const n=Date.now();return[
   {loc:"cph-6f",lv:"full",at:n-50*MIN},
   {loc:"cph-7f",lv:"low",at:n-70*MIN}
 ].map(r=>({...r,demo:true}))}
-let reports;
-try{reports=JSON.parse(localStorage.getItem(KEY))}catch(e){}
-if(!Array.isArray(reports))reports=seed();
-function save(){try{localStorage.setItem(KEY,JSON.stringify(reports))}catch(e){}}
+let reports=[];
+if(!LIVE){try{reports=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+  if(!Array.isArray(reports))reports=seed()}
+function save(){if(!LIVE)try{localStorage.setItem(KEY,JSON.stringify(reports))}catch(e){}}
 
-function ago(t){const m=Math.round((Date.now()-t)/MIN);if(m<1)return"剛剛";if(m<60)return m+" 分鐘前";const h=Math.floor(m/60);if(h<24)return h+" 小時前";return Math.floor(h/24)+" 天前"}
+// 匿名代碼：隨機產生、只存在這支手機，用來做「5 分鐘內只算一筆」與計算不重複使用裝置數
+let device;try{device=localStorage.getItem(KEY+"-device")}catch(e){}
+if(!device){device=(crypto.randomUUID?.()||Math.random().toString(36).slice(2)+Date.now().toString(36));try{localStorage.setItem(KEY+"-device",device)}catch(e){}}
+// 我上次回報各點的時間（只存在這支手機），用來在畫面上提示冷卻
+let mine={};try{mine=JSON.parse(localStorage.getItem(KEY+"-mine"))||{}}catch(e){}
+function markMine(id,at){mine[id]=at;try{localStorage.setItem(KEY+"-mine",JSON.stringify(mine))}catch(e){}}
 
-// 判斷規則：最新一筆為準；與前一筆相隔 60 分鐘內且說法不同 → 待確認；超過 6 小時沒人回報 → 待確認
-function status(id){
-  const rs=reports.filter(r=>r.loc===id).sort((a,b)=>b.at-a.at);
-  if(!rs.length)return{key:"none",label:"尚無回報",cls:"s-unk",rank:3,rs};
-  const [a,b]=rs, age=Date.now()-a.at;
-  if(age>STALE_H*H)return{key:"stale",label:"待確認",why:"超過 "+STALE_H+" 小時沒人回報，上次是「"+LEVEL[a.lv].t+"」",cls:"s-unk",rank:2,rs};
-  if(b&&a.lv!==b.lv&&a.at-b.at<CONFLICT_MIN*MIN&&(a.lv==="empty")!==(b.lv==="empty"))
-    return{key:"conflict",label:"回報不一致",why:"一小時內有人說「"+LEVEL[a.lv].t+"」、有人說「"+LEVEL[b.lv].t+"」",cls:"s-unk",rank:2,rs};
-  const rank={full:0,low:1,empty:4}[a.lv];
-  return{key:a.lv,label:LEVEL[a.lv].t,cls:LEVEL[a.lv].cls,rank,rs};
+let loadedAt=0, loadErr=false;
+async function pull(){
+  try{const r=await fetch(CONFIG.apiUrl+"/reports",{cache:"no-store"});if(!r.ok)throw new Error(r.status);
+    reports=(await r.json()).reports;loadedAt=Date.now();loadErr=false}
+  catch(e){loadErr=true}
 }
+const status=id=>rule(reports,id);
 
 const app=document.getElementById("app");
+const show=(...kids)=>app.replaceChildren(...kids.filter(k=>k!=null));
 let filter="all";
 function h(tag,attrs={},...kids){const e=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==="class")e.className=v;else if(k.startsWith("on"))e.addEventListener(k.slice(2),v);else e.setAttribute(k,v)}for(const k of kids.flat())if(k!=null)e.append(k);return e}
 
 function viewMap(){
   const st=LOCS.map(l=>({l,s:status(l.id)}));
   const n=k=>st.filter(x=>k.includes(x.s.key)).length;
-  app.replaceChildren(
+  show(
     reports.some(r=>r.demo)?h("div",{class:"demo"},"目前顯示的是示範資料，方便看效果。你在回報頁送出的資料只存在這支手機的瀏覽器裡。"):null,
+    loadErr?h("div",{class:"demo"},"暫時連不上回報資料，畫面可能不是最新的。請稍後重新整理。"):null,
     h("div",{class:"summary"},
       h("div",{class:"stat"},h("b",{style:"color:var(--ok)"},String(n(["full","low"]))),h("small",{},"點有庫存")),
       h("div",{class:"stat"},h("b",{style:"color:var(--out)"},String(n(["empty"]))),h("small",{},"點已用完")),
@@ -191,33 +184,42 @@ function groups(st){
 
 function viewReport(id){
   const l=LOCS.find(x=>x.id===id);
-  if(!l){app.replaceChildren(h("p",{class:"note"},"找不到這個地點，QR 碼可能已經更換。"),h("a",{class:"link",href:"#map"},"回到總覽"));return}
+  if(!l){show(h("p",{class:"note"},"找不到這個地點，QR 碼可能已經更換。"),h("a",{class:"link",href:"#map"},"回到總覽"));return}
   let pick=null; const kinds=new Set();
   const s=status(id);
-  const last=reports.filter(r=>r.loc===id&&r.mine).sort((a,b)=>b.at-a.at)[0];
-  const cooling=last&&Date.now()-last.at<COOLDOWN_MIN*MIN;
+  const cooling=mine[id]&&Date.now()-mine[id]<COOLDOWN_MIN*MIN;
   const btn=h("button",{class:"submit",disabled:""},"送出回報");
   const choices=Object.entries(LEVEL).map(([k,v])=>h("button",{class:"choice "+v.cls,"aria-pressed":"false",onclick:e=>{pick=k;choices.forEach(c=>c.setAttribute("aria-pressed",String(c===e.currentTarget)));btn.disabled=!!cooling}},
     h("span",{class:"dot","aria-hidden":"true"}),h("span",{},h("b",{},v.t),h("small",{},v.d))));
-  btn.addEventListener("click",()=>{
-    reports.push({loc:id,lv:pick,kinds:[...kinds],at:Date.now(),mine:true});save();
-    app.replaceChildren(h("div",{class:"thanks"},h("h3",{},"謝謝你的回報"),
+  const err=h("p",{class:"note",role:"alert",style:"color:var(--out)"});
+  btn.addEventListener("click",async()=>{
+    const r={loc:id,lv:pick,kinds:[...kinds],at:Date.now()};
+    if(LIVE){
+      btn.disabled=true;btn.textContent="送出中…";err.textContent="";
+      try{const res=await fetch(CONFIG.apiUrl+"/reports",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({...r,device})});
+        const out=await res.json().catch(()=>({}));
+        if(!res.ok)throw new Error(out.error||"送出失敗，請再試一次。");
+        r.at=out.report.at}
+      catch(e){err.textContent=e.message.includes("fetch")?"網路不穩，請再試一次。":e.message;btn.disabled=false;btn.textContent="送出回報";return}
+    }
+    reports.push(r);markMine(id,r.at);save();
+    show(h("div",{class:"thanks"},h("h3",{},"謝謝你的回報"),
       h("p",{},l.bldg+" "+l.spot+" 現在顯示為「"+status(id).label+"」，下一位同學查得到了。"),
       h("a",{class:"link",href:"#map"},"看看其他地點")));
   });
-  app.replaceChildren(h("div",{class:"rep"},
+  show(h("div",{class:"rep"},
     h("h2",{},l.bldg),h("p",{class:"where"},l.spot+"・"+(l.unit||l.src+"提供")),
     h("p",{class:"now"},s.rs.length?"目前顯示「"+s.label+"」，最後回報 "+ago(s.rs[0].at):"這裡還沒有人回報過"),
     h("p",{class:"q"},"這個點現在的狀況？"),h("div",{class:"choices"},...choices),
     h("p",{class:"q"},"有哪些種類？（選填）"),
     h("div",{class:"kinds"},...KINDS.map(k=>h("button",{class:"chipbtn","aria-pressed":"false",onclick:e=>{kinds.has(k)?kinds.delete(k):kinds.add(k);e.currentTarget.setAttribute("aria-pressed",String(kinds.has(k)))}},k))),
-    btn,
+    btn,err,
     h("p",{class:"note"},cooling?"你剛剛回報過這裡，"+COOLDOWN_MIN+" 分鐘後可以再回報。":"不需要登入，也不會記錄你的身分。")));
 }
 
 function viewQR(){
   let base;try{base=localStorage.getItem(KEY+"-base")}catch(e){}
-  base=base||"https://你的網址/";
+  base=base||(location.protocol.startsWith("http")?location.origin+location.pathname:"https://你的網址/");
   const grid=h("div",{class:"qrgrid"});
   const input=h("input",{id:"base",type:"url",value:base,spellcheck:"false"});
   function draw(){
@@ -228,17 +230,22 @@ function viewQR(){
       return h("div",{class:"qrcard"},box,h("b",{},l.bldg+" "+l.spot),h("code",{},url),h("a",{class:"link",href:"#r-"+l.id,style:"font-size:13px"},"預覽回報頁"))}));
   }
   input.addEventListener("change",draw);
-  app.replaceChildren(
+  show(
     h("p",{class:"note",style:"margin-top:16px;font-size:14px;color:var(--fg)"},"每個補給點一張 QR 碼，貼在置物盒旁邊。同學掃描後會直接打開該點的回報頁，按一下就能送出。"),
     h("label",{class:"field",for:"base"},h("span",{style:"font-size:13px;font-weight:700"},"網站正式網址"),input,
-      h("span",{class:"note",style:"margin:0"},"上線後改成你們的網址（例如 GitHub Pages），QR 碼會自動更新。")),
+      h("span",{class:"note",style:"margin:0"},"預設是你現在開的網址；要換網域時改這裡，QR 碼會自動更新。")),
     grid,
-    h("button",{class:"reset",onclick:()=>{reports=seed();save();location.hash="#map"}},"清除我的測試回報，恢復示範資料"));
+    LIVE?null:h("button",{class:"reset",onclick:()=>{reports=seed();save();mine={};try{localStorage.removeItem(KEY+"-mine")}catch(e){}location.hash="#map"}},"清除我的測試回報，恢復示範資料"));
   draw();
 }
 
-function route(){
+async function route(){
   const hs=location.hash.slice(1)||"map";
+  if(LIVE&&hs!=="qr"&&Date.now()-loadedAt>30e3){
+    if(!loadedAt)show(h("p",{class:"note",style:"margin-top:24px"},"載入中…"));
+    await pull();
+    if((location.hash.slice(1)||"map")!==hs)return; // 載入時已換頁，交給新的 route
+  }
   document.getElementById("tab-map").toggleAttribute("aria-current",false);
   document.getElementById("tab-qr").toggleAttribute("aria-current",false);
   if(hs.startsWith("r-"))viewReport(hs.slice(2));
@@ -247,6 +254,8 @@ function route(){
   window.scrollTo(0,0);
 }
 addEventListener("hashchange",route);route();
+// 停在總覽頁時每分鐘更新一次
+if(LIVE)setInterval(async()=>{if((location.hash.slice(1)||"map")==="map"&&!document.hidden){await pull();if((location.hash.slice(1)||"map")==="map")viewMap()}},60e3);
 </script>
 
 </body>
