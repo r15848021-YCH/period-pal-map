@@ -765,7 +765,7 @@ function viewSim(){
 function viewBadges(){
   const got=earned(GP);
   show(
-    h("div",{class:"redeem"},h("div",{},"我已經收集"),h("b",{},got.length+" / "+BADGES.length),h("div",{class:"note",style:"margin:4px 0 0"},"衛教活動或校園擺攤時出示這一頁，可以兌換小禮物（依現場公告）")),
+    h("div",{class:"redeem"},h("div",{},"我已經收集"),h("b",{},got.length+" / "+BADGES.length),h("div",{class:"note",style:"margin:4px 0 0"},"收集徽章可以兌換小禮物，兌換方式會在試點期間公告")),
     h("div",{class:"badges"},...BADGES.map(b=>{const on=b.test(GP);return h("div",{class:"bdg"+(on?"":" off"),"aria-label":b.name+(on?"，已獲得":"，尚未獲得")},h("div",{class:"bi","aria-hidden":"true"},b.icon),h("b",{},b.name),h("small",{},b.desc))})),
     h("p",{class:"note",style:"margin-top:16px"},(syncNote||(liff?.isLoggedIn?.()?"":"從 LINE 打開時，徽章會和你的 LINE 帳號同步。"))+"遊戲進度不含任何經期或心情資料。"),
     h("p",{style:"margin-top:16px"},h("a",{class:"link",href:"#game"},"去玩遊戲拿徽章 →")));
