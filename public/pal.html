@@ -235,6 +235,8 @@ const HKEY="pal-health-v1", MKEY="periodpal-demo-v2", GKEY="pal-game-v1";
 // ===== 共用工具 =====
 const MIN=60e3, H=60*MIN, DAY=864e5;
 const app=document.getElementById("app");
+// replaceChildren 會把 null 印成「null」字樣，所以先濾掉沒有要顯示的區塊
+const show=(...kids)=>app.replaceChildren(...kids.flat().filter(k=>k!=null));
 function h(tag,attrs={},...kids){const e=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==="class")e.className=v;else if(k.startsWith("on"))e.addEventListener(k.slice(2),v);else e.setAttribute(k,v)}for(const k of kids.flat())if(k!=null)e.append(k);return e}
 const SVGNS="http://www.w3.org/2000/svg";
 function s(tag,attrs={},...kids){const e=document.createElementNS(SVGNS,tag);for(const[k,v]of Object.entries(attrs))e.setAttribute(k,v);for(const k of kids)e.append(k);return e}
@@ -467,7 +469,7 @@ function viewToday(){
   const review=h("div",{class:"card"},
     h("ul",{class:"insights"},...ins.map(x=>h("li",{class:x.flag?"flag":""},x.t))),
     h("p",{class:"note"},"這段由固定規則在你的手機上產生，資料不會上傳。這不是醫療診斷。"));
-  app.replaceChildren(demoBanner(),hero,h("h2",{class:"sec"},"快速紀錄"),quick,h("h2",{class:"sec"},near?"補給提醒":"補給地圖"),supply,h("h2",{class:"sec"},"我的回顧"),review,h("h2",{class:"sec"},"資料與隱私"),dataCard());
+  show(demoBanner(),hero,h("h2",{class:"sec"},"快速紀錄"),quick,h("h2",{class:"sec"},near?"補給提醒":"補給地圖"),supply,h("h2",{class:"sec"},"我的回顧"),review,h("h2",{class:"sec"},"資料與隱私"),dataCard());
   function refreshTodayHero(){const y=scrollY;viewToday();scrollTo(0,y)}
 }
 function dataCard(){
@@ -518,7 +520,7 @@ function viewCycle(){
     [ci.none?"—":ci.avgL+" 天","平均經期"],
     [ci.none?"—":md(ci.next),"下次預估"]];
   const hist=ci.eps.slice(-6).reverse();
-  app.replaceChildren(demoBanner(),
+  show(demoBanner(),
     h("div",{class:"stats"},...st.map(([b,t])=>h("div",{class:"stat"},h("b",{},b),h("small",{},t)))),
     h("div",{class:"calhead"},h("button",{"aria-label":"上個月",onclick:()=>shift(-1)},"‹"),h("b",{},first.getFullYear()+" 年 "+(first.getMonth()+1)+" 月"),h("button",{"aria-label":"下個月",onclick:()=>shift(1)},"›")),
     h("div",{class:"cal"},...[...WK].map(w=>h("span",{class:"wd"},w)),...cells),
@@ -569,7 +571,7 @@ function viewMood(){
   }
   drawChart();
   const notes=Object.entries(HD.days).filter(([k,dv])=>dv.note).sort((a,b)=>a[0]<b[0]?1:-1).slice(0,5);
-  app.replaceChildren(demoBanner(),h("h2",{class:"sec"},"記錄心情"),editor,
+  show(demoBanner(),h("h2",{class:"sec"},"記錄心情"),editor,
     h("h2",{class:"sec"},"最近 30 天"),chartBox,
     h("h2",{class:"sec"},"心情和週期的關係"),phaseBox,
     notes.length?h("h2",{class:"sec"},"最近的備註"):null,
@@ -582,7 +584,7 @@ let filter="all";
 function viewMap(){
   const st=LOCS.map(l=>({l,s:status(l.id)}));
   const n=k=>st.filter(x=>k.includes(x.s.key)).length;
-  app.replaceChildren(
+  show(
     reports.some(r=>r.demo)?h("div",{class:"demo"},"地圖目前顯示示範資料。"):null,
     loadErr?h("div",{class:"demo"},"暫時連不上回報資料，畫面可能不是最新的。請稍後重新整理。"):null,
     h("div",{class:"summary"},
@@ -605,7 +607,7 @@ function groups(st){
 }
 function viewReport(id){
   const l=LOCS.find(x=>x.id===id);
-  if(!l){app.replaceChildren(h("p",{class:"note"},"找不到這個地點，QR 碼可能已經更換。"),h("a",{class:"link",href:"#map"},"回到地圖"));return}
+  if(!l){show(h("p",{class:"note"},"找不到這個地點，QR 碼可能已經更換。"),h("a",{class:"link",href:"#map"},"回到地圖"));return}
   let pick=null;const kinds=new Set(),st=status(id);
   const cooling=mine[id]&&Date.now()-mine[id]<COOLDOWN_MIN*MIN;
   const err=h("p",{class:"note",role:"alert",style:"color:var(--out)"});
@@ -624,12 +626,12 @@ function viewReport(id){
     }
     reports.push(r);markMine(id,r.at);
     const first=!(GP.reports>0);saveG({reports:(GP.reports||0)+1});
-    app.replaceChildren(h("div",{class:"thanks"},h("h3",{},"謝謝你的回報"),
+    show(h("div",{class:"thanks"},h("h3",{},"謝謝你的回報"),
       h("p",{},l.bldg+" "+l.spot+" 現在顯示為「"+status(id).label+"」，下一位同學查得到了。"),
       first?h("p",{},"🗺️ 你拿到了「補給守護者」徽章！"):null,
       h("a",{class:"link",href:"#map"},"看看其他地點")));
   });
-  app.replaceChildren(h("div",{class:"rep"},
+  show(h("div",{class:"rep"},
     h("h2",{},l.bldg),h("p",{class:"where"},l.spot+"・"+(l.unit||l.src+"提供")),
     h("p",{class:"now"},st.rs.length?"目前顯示「"+st.label+"」，最後回報 "+ago(st.rs[0].at):"這裡還沒有人回報過"),
     h("p",{class:"q"},"這個點現在的狀況？"),h("div",{class:"choices"},...choices),
@@ -646,7 +648,7 @@ function gcard(href,icon,title,sub,tag,locked){
 function viewGame(){
   const lv=GAME.levels, passed=lv.filter(l=>GP.done[l.id]).length;
   const dq=dailyQuestion(GAME), answered=GP.days.includes(taipeiDay());
-  app.replaceChildren(
+  show(
     h("div",{class:"prog"},h("span",{},"闖關進度 "+passed+" / "+lv.length),h("a",{class:"link",href:"#badges"},"徽章 "+earned(GP).length+" / "+BADGES.length)),
     h("div",{class:"pbar"},h("i",{style:"width:"+passed/lv.length*100+"%"})),
     h("h2",{class:"sec"},"今日一題"),
@@ -673,7 +675,7 @@ function quizRun(qs,{title,onEnd}){
         h("button",{class:"submit",onclick:()=>{i++;i<qs.length?step():onEnd(score)}},i<qs.length-1?"下一題":"看結果"));
       fb.querySelector(".submit").focus();
     }},h("span",{class:"k"},ABCD[j]),h("span",{},o)));
-    app.replaceChildren(
+    show(
       h("div",{class:"prog"},h("span",{},title),h("span",{},(i+1)+" / "+qs.length)),
       h("div",{class:"pbar"},h("i",{style:"width:"+i/qs.length*100+"%"})),
       h("p",{class:"qtext"},q.q),h("div",{class:"stack"},...opts),fb);
@@ -681,7 +683,7 @@ function quizRun(qs,{title,onEnd}){
   step();
 }
 function endScreen(icon,title,msg,...extra){
-  app.replaceChildren(h("div",{class:"end"},h("div",{class:"big","aria-hidden":"true"},icon),h("h3",{},title),h("p",{},msg)),...extra,
+  show(h("div",{class:"end"},h("div",{class:"big","aria-hidden":"true"},icon),h("h3",{},title),h("p",{},msg)),...extra,
     h("div",{class:"btnrow",style:"justify-content:center;margin-top:16px"},h("a",{class:"btn",href:"#game",style:"text-decoration:none"},"回到遊戲"),h("a",{class:"btn primary",href:"#badges",style:"text-decoration:none"},"看我的徽章")));
 }
 function viewLevel(id){
@@ -716,7 +718,7 @@ function viewMyth(){
       fb.querySelector(".submit").focus();
     };
     const btns=[h("button",{onclick:()=>pick(true)},"⭕ 真的"),h("button",{onclick:()=>pick(false)},"❌ 迷思")];
-    app.replaceChildren(h("div",{class:"prog"},h("span",{},"迷思是真是假"),h("span",{},(i+1)+" / "+ms.length)),
+    show(h("div",{class:"prog"},h("span",{},"迷思是真是假"),h("span",{},(i+1)+" / "+ms.length)),
       h("div",{class:"pbar"},h("i",{style:"width:"+i/ms.length*100+"%"})),
       h("div",{class:"myth"},m.t),h("div",{class:"tf"},...btns),fb);
   }
@@ -750,7 +752,7 @@ function viewSim(){
         h("button",{class:"submit",onclick:()=>{i++;i<sc.length?step():done()}},i<sc.length-1?"下一天":"看結果"));
       fb.querySelector(".submit").focus();
     }},h("span",{},o.t)));
-    app.replaceChildren(h("div",{class:"prog"},h("span",{},"一個月模擬"),h("span",{},(i+1)+" / "+sc.length)),
+    show(h("div",{class:"prog"},h("span",{},"一個月模擬"),h("span",{},(i+1)+" / "+sc.length)),
       h("div",{class:"pbar"},h("i",{style:"width:"+i/sc.length*100+"%"})),
       h("div",{class:"scene"},h("span",{class:"when"},"第 "+c.day+" 天"),h("p",{},c.t)),h("div",{class:"stack"},...opts),fb);
   }
@@ -762,7 +764,7 @@ function viewSim(){
 }
 function viewBadges(){
   const got=earned(GP);
-  app.replaceChildren(
+  show(
     h("div",{class:"redeem"},h("div",{},"我已經收集"),h("b",{},got.length+" / "+BADGES.length),h("div",{class:"note",style:"margin:4px 0 0"},"衛教活動或校園擺攤時出示這一頁，可以兌換小禮物（依現場公告）")),
     h("div",{class:"badges"},...BADGES.map(b=>{const on=b.test(GP);return h("div",{class:"bdg"+(on?"":" off"),"aria-label":b.name+(on?"，已獲得":"，尚未獲得")},h("div",{class:"bi","aria-hidden":"true"},b.icon),h("b",{},b.name),h("small",{},b.desc))})),
     h("p",{class:"note",style:"margin-top:16px"},(syncNote||(liff?.isLoggedIn?.()?"":"從 LINE 打開時，徽章會和你的 LINE 帳號同步。"))+"遊戲進度不含任何經期或心情資料。"),
@@ -776,7 +778,7 @@ async function route(){
   const tab=hs.startsWith("r-")?"map":["daily","sim","myth"].includes(hs)||hs.startsWith("lv-")?"game":TABS.includes(hs)?hs:"today";
   for(const t of TABS){const a=document.getElementById("tab-"+t);if(t===tab)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")}
   if(LIVE&&(tab==="map"||tab==="today")&&Date.now()-loadedAt>30e3){
-    if(!loadedAt)app.replaceChildren(h("p",{class:"note",style:"margin-top:24px"},"載入中…"));
+    if(!loadedAt)show(h("p",{class:"note",style:"margin-top:24px"},"載入中…"));
     await pull();
     if((location.hash.slice(1)||"today")!==hs)return; // 載入時已換頁，交給新的 route
   }
