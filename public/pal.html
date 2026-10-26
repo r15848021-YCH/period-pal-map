@@ -396,8 +396,13 @@ async function initLiff(){
   try{await window.liff.init({liffId:id});liff=window.liff}catch(e){return}
   if(liff.isLoggedIn())await pushProgress();
 }
-// LINE 選單的連結是 liff.line.me/<ID>?tab=game，打開後換成對應分頁
-function tabFromQuery(){const t=new URLSearchParams(location.search).get("tab");if(t&&!location.hash)history.replaceState(null,"",location.pathname+location.search+"#"+t)}
+// LINE 選單的連結是 liff.line.me/<ID>?tab=game，打開後換成對應分頁。
+// LINE 第一次打開時會把 ?tab=game 包在 liff.state 參數裡（liff.init 之後才換回來），兩種都要讀
+function queryTab(){
+  const q=new URLSearchParams(location.search), st=q.get("liff.state");
+  return q.get("tab")||(st?new URLSearchParams(st.slice(st.indexOf("?")+1)).get("tab"):null);
+}
+function tabFromQuery(){const t=queryTab();if(t&&!location.hash)history.replaceState(null,"",location.pathname+location.search+"#"+t)}
 
 // ===== 共用元件 =====
 function moodScale(cur,onpick){
@@ -785,7 +790,7 @@ async function route(){
 tabFromQuery();
 addEventListener("hashchange",()=>{route();scrollTo(0,0)});route();
 initLiff().then(()=>{
-  const t=new URLSearchParams(location.search).get("tab"), cur=location.hash.slice(1);
+  const t=queryTab(), cur=location.hash.slice(1);
   if(t&&TABS.includes(t)&&(!cur||cur==="today")&&t!=="today")location.hash="#"+t;
   else if(cur==="badges")route(); // 同步完更新徽章頁
 });
