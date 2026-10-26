@@ -42,8 +42,8 @@ LINE Bot ───────┘    （D1 資料庫）       └─ LINE 通知
 需要 Node.js 18 以上。
 
 1. `npm install`，再 `npx wrangler login` 登入 Cloudflare 帳號。
-2. `npx wrangler d1 create period-pal-map`，把印出的 `database_id` 貼進 `wrangler.toml`。
-3. `npm run db:init` 建立資料表。
+2. 正式資料庫已建立，`database_id` 已填在 `wrangler.toml`（若要另建一個，用 `npx wrangler d1 create period-pal-map` 再換掉 ID，並執行 `npm run db:init`）。
+3. （已在 Cloudflare 後台 D1 Console 建好資料表，不用再做。）
 4. `npx wrangler secret put ADMIN_KEY`，設一組下載 CSV 用的密碼。
 5. `npm run deploy`。網址會是 `https://period-pal-map.<你的子網域>.workers.dev/`。
 

@@ -10,8 +10,7 @@ binding = "ASSETS"
 [[d1_databases]]
 binding = "DB"
 database_name = "period-pal-map"
-# 執行 `npx wrangler d1 create period-pal-map` 後，把它印出的 database_id 貼在這裡
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "c2af0eed-2d86-43f7-bf9e-15beb223d946"
 
 # 機密設定用 `npx wrangler secret put <名稱>` 設定，不要寫在這個檔案：
 #   ADMIN_KEY                  下載 CSV 用的密碼
