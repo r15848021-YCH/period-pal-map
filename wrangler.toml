@@ -1,0 +1,19 @@
+# 一個 Cloudflare Worker 同時做三件事：託管網頁（public/）、回報 API（/api/*）、LINE Bot（/api/line）
+name = "period-pal-map"
+main = "src/worker.js"
+compatibility_date = "2026-09-01"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "period-pal-map"
+database_id = "c2af0eed-2d86-43f7-bf9e-15beb223d946"
+
+# 機密設定用 `npx wrangler secret put <名稱>` 設定，不要寫在這個檔案：
+#   ADMIN_KEY                  下載 CSV 用的密碼
+#   LINE_CHANNEL_SECRET        LINE Developers → Messaging API 頻道的 Channel secret
+#   LINE_CHANNEL_ACCESS_TOKEN  同一頁的 Channel access token（long-lived）
+#   LINE_STAFF_TO              補貨群組的 ID（把 Bot 加進群組後傳「群組ID」取得）
