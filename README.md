@@ -82,7 +82,7 @@ LINE Bot 能做的事：
    - Endpoint URL：`https://<你的網址>/pal`
    - Scope：勾 `openid`（徽章同步用，不需要 `profile`）
    - 打開「shareTargetPicker」（迷思遊戲分享給朋友用）
-3. 把拿到的 LIFF ID 存成機密：`npx wrangler secret put LIFF_ID`，再 `npm run deploy`。
+3. 把拿到的 LIFF ID 填進 `wrangler.toml` 的 `[vars]` 裡的 `LIFF_ID`（它是公開的，不是密碼），push 到 main 就會自動部署。
 4. 到 LINE Official Account Manager → 圖文選單 → 建立：版型選大型四格（2 × 2），圖片上傳 `line/richmenu.png`，四格動作都選「連結」：
    - 左上 找補給：`https://liff.line.me/<LIFF ID>?tab=map`
    - 右上 我的紀錄：`https://liff.line.me/<LIFF ID>?tab=today`

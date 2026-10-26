@@ -7,6 +7,10 @@ compatibility_date = "2026-09-01"
 directory = "./public"
 binding = "ASSETS"
 
+# 公開設定（不是密碼，可以寫在這裡）
+[vars]
+LIFF_ID = "2012205207-LsQ1jRQE"  # LINE Login 頻道的 LIFF ID：好朋友 Pal 在 LINE 裡打開、徽章同步用
+
 [[d1_databases]]
 binding = "DB"
 database_name = "period-pal-map"
@@ -17,7 +21,6 @@ database_id = "c2af0eed-2d86-43f7-bf9e-15beb223d946"
 #   LINE_CHANNEL_SECRET        LINE Developers → Messaging API 頻道的 Channel secret
 #   LINE_CHANNEL_ACCESS_TOKEN  同一頁的 Channel access token（long-lived）
 #   LINE_STAFF_TO              補貨群組的 ID（把 Bot 加進群組後傳「群組ID」取得）
-#   LIFF_ID                    LINE Login 頻道的 LIFF ID（好朋友 Pal 在 LINE 裡打開、徽章同步用）
 
 # 預覽版（PR 的自動預覽，`wrangler preview`）用的資料庫。
 # 目前和正式版共用同一個 D1：在預覽版送出的回報與徽章會出現在正式地圖上。
