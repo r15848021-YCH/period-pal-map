@@ -23,6 +23,7 @@ export default {
     if(p==="/api/reports"&&req.method==="POST")return postReport(req,env,ctx);
     if(p==="/api/export.csv"&&req.method==="GET")return exportCsv(url,env);
     if(p==="/api/line"&&req.method==="POST")return lineWebhook(req,env,ctx,url.origin);
+    if(p==="/api/line/status"&&req.method==="GET")return lineStatus(env);
     if(p==="/api/config"&&req.method==="GET")return json({liffId:env.LIFF_ID||""});
     if(p==="/api/progress"&&(req.method==="GET"||req.method==="PUT"))return progress(req,env);
     if(p==="/api/game-stats"&&req.method==="GET")return gameStats(url,env);
@@ -207,6 +208,21 @@ async function lineApi(env,kind,payload){
   const r=await fetch("https://api.line.me/v2/bot/message/"+kind,{method:"POST",
     headers:{"content-type":"application/json",authorization:"Bearer "+env.LINE_CHANNEL_ACCESS_TOKEN},body:JSON.stringify(payload)});
   if(!r.ok)console.error("LINE "+kind+" failed",r.status,await r.text());
+}
+
+// 設定檢查：只回報有沒有讀到、格式和 token 能不能用，不會顯示密碼本身
+async function lineStatus(env){
+  const sec=env.LINE_CHANNEL_SECRET||"", tok=env.LINE_CHANNEL_ACCESS_TOKEN||"";
+  const out={
+    LINE_CHANNEL_SECRET:sec?(/^[0-9a-f]{32}$/.test(sec)?"已讀到，格式正確":"已讀到，但格式不對（應該是 32 個英數字，可能多了空白或貼錯）"):"沒有讀到",
+    LINE_CHANNEL_ACCESS_TOKEN:tok?"已讀到":"沒有讀到",
+    LIFF_ID:env.LIFF_ID?"已設定":"沒有設定",
+  };
+  if(tok){
+    const r=await fetch("https://api.line.me/v2/bot/info",{headers:{authorization:"Bearer "+tok}});
+    out.token檢查=r.ok?"可以用，Bot 名稱："+(await r.json()).displayName:"LINE 不接受這組 token（"+r.status+"），請重新 Issue 一組";
+  }
+  return json(out);
 }
 
 async function hmac(secret,data){
