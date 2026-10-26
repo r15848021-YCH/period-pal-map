@@ -17,3 +17,4 @@ database_id = "c2af0eed-2d86-43f7-bf9e-15beb223d946"
 #   LINE_CHANNEL_SECRET        LINE Developers → Messaging API 頻道的 Channel secret
 #   LINE_CHANNEL_ACCESS_TOKEN  同一頁的 Channel access token（long-lived）
 #   LINE_STAFF_TO              補貨群組的 ID（把 Bot 加進群組後傳「群組ID」取得）
+#   LIFF_ID                    LINE Login 頻道的 LIFF ID（好朋友 Pal 在 LINE 裡打開、徽章同步用）

@@ -2,6 +2,8 @@
 
 公衛學院試辦的生理用品即時地圖。同學掃描貼在補給點旁的 QR Code，一鍵回報「充足／剩少量／已用完」，其他人打開網頁就知道哪裡有。
 
+依指導教授建議，地圖（方案 A）與經期・心情紀錄（方案 B）已合併成 **好朋友 Pal**，再加上科普互動遊戲，全部放進同一個 LINE 官方帳號：聊天室下方選單點「找補給／我的紀錄／科普遊戲／我的徽章」，就在 LINE 裡打開 `pal.html`。
+
 本專案為 115-1 NTU Challengers #PBL #AI Agent 個別型提案。
 
 ## 目前進度
@@ -12,6 +14,10 @@
 - [x] 回報 API 與資料庫：Cloudflare Worker + D1（取代原本規劃的 Notion）
 - [x] LINE Bot：查詢各樓層現況、在 LINE 裡回報、用完時通知補貨群組
 - [ ] 在 Cloudflare 與 LINE Developers 建立正式帳號並上線
+- [x] 好朋友 Pal（LINE 內網頁）：地圖＋經期・心情紀錄＋科普遊戲＋徽章
+- [x] LINE Bot「今日一題」與遊戲進度同步
+- [ ] 科普題目請醫師或公衛老師審閱
+- [ ] 在 LINE Developers 建立 LIFF、設定圖文選單
 - [ ] Claude Agent：定時判斷狀態、通知補貨、產出每週摘要
 - [ ] 每週匿名統計匯出到本 repo 的 `data/`，作為公開紀錄
 
@@ -29,7 +35,11 @@ LINE Bot ───────┘    （D1 資料庫）       └─ LINE 通知
 
 | 檔案 | 用途 |
 | --- | --- |
-| `public/index.html` | 整個網頁 |
+| `public/index.html` | 好朋友地圖網頁（掃 QR Code 回報、各點 QR 碼） |
+| `public/pal.html` | 好朋友 Pal：在 LINE 裡打開的整合頁（今天／經期／心情／地圖／遊戲／徽章） |
+| `public/game.json` | 科普題庫：五關問答、迷思是真是假、一個月模擬（網頁與 LINE Bot 共用） |
+| `public/game-rules.js` | 徽章條件、進度合併、今日一題（網頁與 LINE Bot 共用） |
+| `line/richmenu.png` | LINE 圖文選單圖片（2500×1686，四格） |
 | `public/locs.json` | 補給點清單（網頁與 LINE Bot 共用） |
 | `public/rules.js` | 判斷規則（網頁與 LINE Bot 共用） |
 | `src/worker.js` | 回報 API、CSV 匯出、LINE Bot webhook |
@@ -64,6 +74,30 @@ LINE Bot 能做的事：
 - 傳「回報」：用按鈕選樓層和狀態，和掃 QR Code 回報一樣寫進資料庫。
 - 有樓層從其他狀態變成「已用完」時，主動推播到補貨群組。回覆訊息免費；主動推播會用到官方帳號每月的免費訊息額度。
 
+### 接上好朋友 Pal（LINE 內網頁）
+
+1. 先更新資料表：到 Cloudflare 後台 D1 Console，貼上 `schema.sql` 最後的 `CREATE TABLE IF NOT EXISTS progress ...` 那一段執行（或 `npm run db:init`，已存在的表不會被動到）。
+2. 到 LINE Developers，在**同一個 Provider** 底下建立「LINE Login」頻道，再到該頻道的 LIFF 分頁按 Add：
+   - Size：Full
+   - Endpoint URL：`https://<你的網址>/pal`
+   - Scope：勾 `openid`（徽章同步用，不需要 `profile`）
+   - 打開「shareTargetPicker」（迷思遊戲分享給朋友用）
+3. 把拿到的 LIFF ID 存成機密：`npx wrangler secret put LIFF_ID`，再 `npm run deploy`。
+4. 到 LINE Official Account Manager → 圖文選單 → 建立：版型選大型四格（2 × 2），圖片上傳 `line/richmenu.png`，四格動作都選「連結」：
+   - 左上 找補給：`https://liff.line.me/<LIFF ID>?tab=map`
+   - 右上 我的紀錄：`https://liff.line.me/<LIFF ID>?tab=today`
+   - 左下 科普遊戲：`https://liff.line.me/<LIFF ID>?tab=game`
+   - 右下 我的徽章：`https://liff.line.me/<LIFF ID>?tab=badges`
+   - 選單列文字填「好朋友 Pal 選單」，預設顯示選「顯示」。
+
+還沒設定 LIFF 前，`https://<你的網址>/pal` 也能直接用瀏覽器打開，只是徽章不會同步。
+
+LINE Bot 新增的指令：
+
+- 傳「今日一題」：出一題科普題，按 A／B／C／D 作答後回覆解說。每天同一題，網頁「遊戲」頁也是同一題；累積 7 天拿徽章。
+- 傳「遊戲」「紀錄」「徽章」等：回覆打開好朋友 Pal 的按鈕。
+- 遊戲統計（給成效指標）：`https://<你的網址>/api/game-stats?key=<ADMIN_KEY>`，回傳玩家數與各徽章人數。
+
 ## 本機測試
 
 ```
@@ -72,7 +106,7 @@ printf 'ADMIN_KEY=test\nLINE_CHANNEL_SECRET=test\n' > .dev.vars
 npm run dev
 ```
 
-打開 http://localhost:8787 。若要只看網頁、不連資料庫，把 `public/index.html` 的 `CONFIG.apiUrl` 改成空字串就會回到示範模式。
+打開 http://localhost:8787 （地圖）或 http://localhost:8787/pal （好朋友 Pal）。若要只看網頁、不連資料庫，把 `public/index.html` 的 `CONFIG.apiUrl` 改成空字串就會回到示範模式。
 
 ## 要改設定的地方
 
@@ -90,6 +124,7 @@ npm run dev
 
 - 回報不需要登入，不收集姓名、學號、照片或任何可辨識個人的資料。
 - 網頁回報只帶一組隨機匿名代碼；LINE 回報只存 LINE 帳號的加鹽雜湊，資料庫裡沒有原本的 LINE ID。兩者都只用來做「同一來源 5 分鐘內只算一筆」與計算不重複使用人數。
+- 經期、症狀、心情與備註只存在使用者手機（LINE 內網頁的本機儲存），不會上傳。遊戲進度只存 LINE 帳號的加鹽雜湊與過關紀錄，不含經期資料。
 - 公開到 GitHub 的只有每週彙總統計（各點回報次數、用完次數、盤點用量），不含單筆回報時間戳記。
 
 ## 判斷規則（`public/rules.js`，之後交給 Agent）

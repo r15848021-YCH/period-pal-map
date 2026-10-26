@@ -1,0 +1,797 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>好朋友 Pal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+html{-webkit-text-size-adjust:100%}body{margin:0}[hidden]{display:none!important}
+/* Layout: phone-first single column for the LINE in-app browser (LIFF); hash views 今天 / 經期 / 心情 / 地圖 / 遊戲 / 徽章
+   under a sticky tab bar. 合併方案 A（補給地圖）與方案 B（經期・心情），再加上科普遊戲。 */
+:root{
+  --bg:#f6f4f7; --surface:#ffffff; --fg:#231c2b; --muted:#6c6375; --line:#e3dde8;
+  --accent:#8a2f62; --accent-ink:#ffffff; --accent-soft:#f5e6ef;
+  --ok:#1f7a4d; --ok-soft:#e1f2e8; --low:#a35d00; --low-soft:#fbeed8; --out:#b3261e; --out-soft:#fbe3e1;
+  --unk:#5d6470; --unk-soft:#eceef1;
+  --pre:#b7791f; --pre-soft:#fbf0dc;
+  --m1:#4f5d8f; --m2:#8077ad; --m3:#a99aa8; --m4:#cf7fa5; --m5:#a8336f;
+  --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#17131b; --surface:#221c28; --fg:#f1ebf4; --muted:#a79daf; --line:#372e3e;
+  --accent:#e889bb; --accent-ink:#2a0e1d; --accent-soft:#3a2231;
+  --ok:#6fd39c; --ok-soft:#173326; --low:#f2b25a; --low-soft:#3a2a12; --out:#ff8a80; --out-soft:#3d1a18;
+  --unk:#b4bac4; --unk-soft:#2a2b31;
+  --pre:#f0b964; --pre-soft:#3a2c15;
+  --m1:#8d9bd0; --m2:#ada4dc; --m3:#c4b6c3; --m4:#ee9fc4; --m5:#ff7fb9; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#17131b; --surface:#221c28; --fg:#f1ebf4; --muted:#a79daf; --line:#372e3e;
+  --accent:#e889bb; --accent-ink:#2a0e1d; --accent-soft:#3a2231;
+  --ok:#6fd39c; --ok-soft:#173326; --low:#f2b25a; --low-soft:#3a2a12; --out:#ff8a80; --out-soft:#3d1a18;
+  --unk:#b4bac4; --unk-soft:#2a2b31;
+  --pre:#f0b964; --pre-soft:#3a2c15;
+  --m1:#8d9bd0; --m2:#ada4dc; --m3:#c4b6c3; --m4:#ee9fc4; --m5:#ff7fb9; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.6}
+.wrap{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.top .wrap{padding-block:12px 0;display:flex;flex-direction:column;gap:8px}
+.brand{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.brand h1{margin:0;font-size:20px;font-weight:900;letter-spacing:.02em;text-wrap:balance}
+.brand span{color:var(--muted);font-size:12px}
+nav.tabs{display:flex;gap:2px;overflow-x:auto}
+nav.tabs a{padding:8px 10px;color:var(--muted);text-decoration:none;font-weight:500;border-bottom:3px solid transparent;white-space:nowrap}
+nav.tabs a[aria-current="page"]{color:var(--accent);border-color:var(--accent)}
+a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.demo{margin-top:16px;padding:10px 12px;border-radius:8px;background:var(--accent-soft);font-size:13px;color:var(--fg);display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+.demo button{font:inherit;font-size:13px;background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;cursor:pointer}
+h2.sec{font-size:13px;letter-spacing:.08em;color:var(--muted);margin:24px 0 8px;font-weight:700}
+.card{padding:16px;border-radius:12px;background:var(--surface);border:1px solid var(--line)}
+.stack{display:flex;flex-direction:column;gap:12px}
+.note{color:var(--muted);font-size:12px;margin:8px 0 0}
+.link{color:var(--accent);font-weight:500}
+.chipbtn{font:inherit;font-size:13px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
+.chipbtn[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.lbl{font-size:13px;font-weight:700;margin:14px 0 8px}
+.lbl:first-child{margin-top:0}
+/* today */
+.hero{display:flex;flex-direction:column;gap:12px;margin-top:16px}
+.hero .day{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.hero .day b{font-size:40px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums}
+.hero .day span{color:var(--muted)}
+.hero .next{font-size:17px;font-weight:700}
+.hero .next small{display:block;font-weight:400;font-size:13px;color:var(--muted)}
+.cbar{position:relative;height:14px;border-radius:7px;background:var(--line);overflow:hidden;display:flex}
+.cbar i{display:block;height:100%}
+.cbar .p{background:var(--accent)} .cbar .r{background:transparent} .cbar .w{background:var(--pre)}
+.cmark{position:relative;height:18px}
+.cmark span{position:absolute;top:0;transform:translateX(-50%);font-size:11px;color:var(--fg);font-weight:700;white-space:nowrap}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.mscale{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.mbtn{font:inherit;font-size:12px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 2px;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;min-width:0}
+.mbtn i{width:18px;height:18px;border-radius:50%;background:var(--mc)}
+.mbtn[aria-pressed="true"]{border-color:var(--mc)}
+.flows{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.fbtn{font:inherit;font-size:13px;padding:8px 2px;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;min-width:0}
+.fbtn[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.saved{font-size:12px;color:var(--ok);min-height:1.6em;margin:8px 0 0}
+.supply{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.supply b{font-size:22px;color:var(--ok);font-variant-numeric:tabular-nums}
+.insights{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
+.insights li{padding-left:14px;position:relative}
+.insights li::before{content:"";position:absolute;left:0;top:.65em;width:6px;height:6px;border-radius:50%;background:var(--muted)}
+.insights li.flag::before{background:var(--out)}
+.insights li.flag{color:var(--fg)}
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--unk-soft);color:var(--unk);vertical-align:1px}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font:inherit;font-size:14px;font-weight:500;padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
+.btn.danger{color:var(--out);border-color:var(--out)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+textarea.out{width:100%;min-height:120px;font-family:var(--f-mono);font-size:11px;margin-top:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);padding:8px}
+/* calendar */
+.calhead{display:flex;justify-content:space-between;align-items:center;margin-top:16px}
+.calhead b{font-size:17px}
+.calhead button{font:inherit;font-size:18px;width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:10px}
+.cal .wd{text-align:center;font-size:12px;color:var(--muted)}
+.cell{font:inherit;position:relative;aspect-ratio:1;max-width:100%;min-width:0;border-radius:10px;border:1px solid transparent;background:var(--surface);color:var(--fg);cursor:pointer;font-size:14px;font-variant-numeric:tabular-nums;padding:0}
+.cell.out{visibility:hidden}
+.cell.per{background:var(--accent);color:var(--accent-ink);font-weight:700}
+.cell.pred{border:2px dashed var(--accent)}
+.cell.today{box-shadow:inset 0 0 0 2px var(--fg)}
+.cell.sel{outline:3px solid var(--accent);outline-offset:1px}
+.cell .md{position:absolute;left:50%;bottom:5px;width:6px;height:6px;border-radius:50%;transform:translateX(-50%);background:var(--mc)}
+.cell.per .md{box-shadow:0 0 0 1.5px var(--accent-ink)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}
+.stat{padding:10px 12px;border-radius:10px;background:var(--surface);border:1px solid var(--line);min-width:0}
+.stat b{display:block;font-size:22px;font-variant-numeric:tabular-nums;line-height:1.2}
+.stat small{color:var(--muted);font-size:12px}
+/* mood */
+.chart{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font-family:var(--f-body);font-size:11px}
+.phase{display:grid;grid-template-columns:5.5em 1fr 2.5em;gap:8px;align-items:center;font-size:13px}
+.phase .bar{height:10px;border-radius:5px;background:var(--line);overflow:hidden}
+.phase .bar i{display:block;height:100%;border-radius:5px}
+.phase b{font-variant-numeric:tabular-nums;text-align:right}
+.notes{display:flex;flex-direction:column}
+.notes div{padding:10px 0;border-top:1px solid var(--line);font-size:14px}
+.notes div:first-child{border-top:0;padding-top:0}
+.notes small{color:var(--muted);font-family:var(--f-mono);font-size:11.5px;margin-right:8px}
+textarea.memo{font:inherit;width:100%;min-height:64px;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);resize:vertical}
+/* map (from 好朋友地圖) */
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.group{margin-top:20px}
+.group h2{font-size:13px;letter-spacing:.08em;color:var(--muted);margin:0 0 8px;font-weight:700}
+.list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden}
+.row{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px 14px;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.dot{width:10px;height:10px;border-radius:50%}
+.row .meta{min-width:0}
+.row .name{font-weight:700}
+.row .sub{color:var(--muted);font-size:12px}
+.row .sub .t{font-family:var(--f-mono);font-size:11.5px}
+.pill{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px;white-space:nowrap}
+.s-full{--c:var(--ok);--cs:var(--ok-soft)} .s-low{--c:var(--low);--cs:var(--low-soft)}
+.s-empty{--c:var(--out);--cs:var(--out-soft)} .s-unk{--c:var(--unk);--cs:var(--unk-soft)}
+.pill{color:var(--c);background:var(--cs)} .dot{background:var(--c)}
+.row a.go{font-size:13px;color:var(--accent);text-decoration:none;font-weight:500}
+.row-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.rep h2{font-size:24px;margin:20px 0 0;font-weight:900;text-wrap:balance}
+.rep .where{color:var(--muted);margin:2px 0 0}
+.rep .now{margin-top:12px;font-size:13px;color:var(--muted)}
+.q{margin:24px 0 10px;font-weight:700}
+.choices{display:grid;gap:10px}
+.choice{font:inherit;display:flex;align-items:center;gap:14px;text-align:left;padding:16px;border-radius:12px;border:2px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
+.choice b{font-size:18px}
+.choice small{display:block;color:var(--muted);font-size:13px}
+.choice .dot{width:16px;height:16px;flex:none}
+.choice[aria-pressed="true"]{border-color:var(--c);background:var(--cs)}
+.submit{font:inherit;font-weight:700;font-size:16px;width:100%;margin-top:24px;padding:14px;border:0;border-radius:12px;background:var(--accent);color:var(--accent-ink);cursor:pointer}
+.submit:disabled{opacity:.4;cursor:not-allowed}
+.thanks{margin-top:32px;padding:20px;border-radius:12px;background:var(--surface);border:1px solid var(--line)}
+.thanks h3{margin:0 0 6px;font-size:20px}
+/* game */
+.gcard{display:flex;gap:14px;align-items:center;text-decoration:none;color:inherit}
+.gcard .gi{font-size:28px;width:48px;height:48px;flex:none;display:grid;place-items:center;border-radius:12px;background:var(--accent-soft)}
+.gcard b{display:block;font-size:16px}
+.gcard small{display:block;color:var(--muted);font-size:13px}
+.gcard .tag{margin-left:auto;flex:none;font-size:12px;font-weight:700;color:var(--ok)}
+.gcard.locked{opacity:.55}
+.lvlist{display:flex;flex-direction:column;gap:10px}
+.prog{display:flex;justify-content:space-between;align-items:center;margin-top:16px;font-size:13px;color:var(--muted)}
+.pbar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:6px}
+.pbar i{display:block;height:100%;background:var(--accent)}
+.qtext{font-size:19px;font-weight:700;margin:16px 0 14px;text-wrap:pretty}
+.opt{font:inherit;width:100%;text-align:left;padding:14px 16px;border-radius:12px;border:2px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;display:flex;gap:10px;align-items:flex-start}
+.opt .k{font-family:var(--f-mono);color:var(--muted);flex:none}
+.opt:disabled{cursor:default;color:var(--fg);opacity:1}
+.opt:disabled:not(.right):not(.wrong){opacity:.6}
+.opt.right{border-color:var(--ok);background:var(--ok-soft)}
+.opt.wrong{border-color:var(--out);background:var(--out-soft)}
+.opt.right::after,.opt.wrong::after{margin-left:auto;font-weight:700;flex:none}
+.opt.right::after{content:"✓";color:var(--ok)} .opt.wrong::after{content:"✗";color:var(--out)}
+.tf button:disabled{color:var(--fg);opacity:.6;cursor:default}
+.fb{margin-top:14px;padding:14px 16px;border-radius:12px;border:1px solid var(--line);background:var(--surface)}
+.fb b{display:block;margin-bottom:4px}
+.fb.ok b{color:var(--ok)} .fb.no b{color:var(--out)}
+.myth{margin-top:16px;padding:28px 20px;border-radius:16px;background:var(--surface);border:1px solid var(--line);font-size:20px;font-weight:700;text-align:center;min-height:140px;display:grid;place-items:center;text-wrap:balance}
+.tf{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.tf button{font:inherit;font-size:18px;font-weight:700;padding:14px;border-radius:12px;border:2px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
+.scene{margin-top:16px}
+.scene .when{font-family:var(--f-mono);font-size:12px;color:var(--accent);font-weight:500}
+.scene p{font-size:17px;margin:6px 0 14px;text-wrap:pretty}
+.stack .opt+.opt{margin-top:0}
+.end{margin-top:24px;text-align:center}
+.end .big{font-size:48px;line-height:1.1}
+.end h3{margin:8px 0 4px;font-size:22px}
+.badges{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
+.bdg{padding:14px 6px;border-radius:12px;background:var(--surface);border:1px solid var(--line);text-align:center;min-width:0}
+.bdg .bi{font-size:30px;line-height:1.2}
+.bdg b{display:block;font-size:13px;margin-top:4px}
+.bdg small{display:block;font-size:11px;color:var(--muted);line-height:1.4;margin-top:2px}
+.bdg.off .bi{filter:grayscale(1);opacity:.35}
+.bdg.off b{color:var(--muted)}
+.redeem{margin-top:16px;padding:16px;border-radius:12px;border:2px dashed var(--accent);background:var(--accent-soft);text-align:center}
+.redeem b{font-size:28px;font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion:no-preference){.choice,.chipbtn,.mbtn,.fbtn,.cell,.opt,.tf button{transition:border-color .15s,background .15s}}
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap">
+  <div class="brand"><h1>好朋友 Pal</h1><span>找補給・我的紀錄・科普遊戲</span></div>
+  <nav class="tabs">
+    <a href="#today" id="tab-today">今天</a>
+    <a href="#cycle" id="tab-cycle">經期</a>
+    <a href="#mood" id="tab-mood">心情</a>
+    <a href="#map" id="tab-map">地圖</a>
+    <a href="#game" id="tab-game">遊戲</a>
+    <a href="#badges" id="tab-badges">徽章</a>
+  </nav>
+</div></header>
+<main class="wrap" id="app"></main>
+
+<script type="module">
+import {LEVEL,KINDS,COOLDOWN_MIN,status as rule,ago} from "./rules.js";
+import {PASS,BADGES,earned,merge,taipeiDay,dailyQuestion} from "./game-rules.js";
+// ===== 設定區 =====
+const CONFIG={
+  // 回報與遊戲進度 API（Cloudflare Worker，與網頁同一個網站）。留空 = 示範模式，地圖只顯示示範資料
+  apiUrl:"/api",
+};
+// 補給點清單（locs.json）、科普題庫（game.json）都和 LINE Bot 共用
+const [LOCS,GAME]=await Promise.all([fetch("./locs.json").then(r=>r.json()),fetch("./game.json").then(r=>r.json())]);
+const LIVE=!!CONFIG.apiUrl;
+// 經期與心情紀錄只存在這支手機；地圖的匿名代碼沿用好朋友地圖網頁的同一組，兩邊回報冷卻一致
+const HKEY="pal-health-v1", MKEY="periodpal-demo-v2", GKEY="pal-game-v1";
+
+// ===== 共用工具 =====
+const MIN=60e3, H=60*MIN, DAY=864e5;
+const app=document.getElementById("app");
+function h(tag,attrs={},...kids){const e=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==="class")e.className=v;else if(k.startsWith("on"))e.addEventListener(k.slice(2),v);else e.setAttribute(k,v)}for(const k of kids.flat())if(k!=null)e.append(k);return e}
+const SVGNS="http://www.w3.org/2000/svg";
+function s(tag,attrs={},...kids){const e=document.createElementNS(SVGNS,tag);for(const[k,v]of Object.entries(attrs))e.setAttribute(k,v);for(const k of kids)e.append(k);return e}
+function load(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}}
+function store(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+function dkey(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function parse(k){const[y,m,d]=k.split("-").map(Number);return new Date(y,m-1,d)}
+function today0(){const d=new Date();return new Date(d.getFullYear(),d.getMonth(),d.getDate())}
+function addD(d,n){return new Date(d.getFullYear(),d.getMonth(),d.getDate()+n)}
+function diff(a,b){return Math.round((b-a)/DAY)}
+function md(d){return(d.getMonth()+1)+"/"+d.getDate()}
+const WK="日一二三四五六";
+function avg(a){return a.length?a.reduce((x,y)=>x+y,0)/a.length:null}
+
+// ===== 健康紀錄（經期＋心情）=====
+const FLOW={none:"沒有",spot:"點狀",light:"量少",medium:"中等",heavy:"量多"};
+const SYMS=["經痛","經痛很嚴重","頭痛","腹脹","腰痠","疲倦","長痘痘","胸部脹痛","失眠","特別想吃甜"];
+const MOODS=["","很差","不太好","普通","不錯","很好"];
+const MTAGS=["平靜","開心","有動力","焦慮","煩躁","低落","壓力大","想哭","容易累"];
+
+function seedHealth(){
+  const T=today0(),days={};
+  const starts=[-98,-70,-41,-12],lens=[4,6,5,5];
+  starts.forEach((st,i)=>{for(let j=0;j<lens[i];j++){
+    const flow=j===1?"heavy":j===lens[i]-1?"light":"medium";
+    const sym=j===0?(i===2?["經痛很嚴重","腰痠"]:["經痛","疲倦"]):j===1?["經痛"]:[];
+    days[dkey(addD(T,st+j))]={flow,sym};
+  }});
+  const preTags=[["煩躁"],["焦慮","容易累"],["低落"],["煩躁","想哭"]],okTags=[["平靜"],["開心"],["有動力"],["平靜","開心"],["壓力大"]];
+  for(let n=-45;n<=-1;n++){
+    if((n*7+3)%5===0)continue;
+    const inPer=starts.some((st,i)=>n>=st&&n<st+lens[i]);
+    const nx=starts.find(st=>st>n);
+    const pre=nx!==undefined&&nx-n<=7&&!inPer;
+    const wob=[0,1,-1,0,1,0,-1][(n+70)%7]*0.6;
+    const base=inPer?2.6:pre?2.8:3.9;
+    const score=Math.max(1,Math.min(5,Math.round(base+wob)));
+    const k=dkey(addD(T,n));
+    const tags=(inPer||pre?preTags:okTags)[(n+90)%(inPer||pre?4:5)];
+    days[k]={...(days[k]||{}),mood:score,tags};
+  }
+  days[dkey(addD(T,-15))].note="報告截止前一天，熬夜到三點。";
+  days[dkey(addD(T,-12))].note="早上開會時突然來，2 樓沒有了，跑到 3 樓才拿到。";
+  days[dkey(addD(T,-3))].note="期中考完，跟朋友去吃飯。";
+  return{days,demo:true};
+}
+let HD=load(HKEY);
+if(!HD||typeof HD.days!=="object")HD={days:{},demo:false};
+function saveH(){store(HKEY,HD)}
+function getDay(k){return HD.days[k]||{}}
+function setDay(k,patch){
+  const d={...getDay(k),...patch};
+  for(const f of Object.keys(d))if(d[f]==null||d[f]===""||(Array.isArray(d[f])&&!d[f].length))delete d[f];
+  if(Object.keys(d).length)HD.days[k]=d;else delete HD.days[k];
+  saveH();
+}
+
+// 經期：連續（間隔 2 天內）有經血的日子算同一次；點狀出血不算開始
+function episodes(){
+  const ks=Object.keys(HD.days).filter(k=>HD.days[k].flow&&HD.days[k].flow!=="spot").sort();
+  const eps=[];
+  for(const k of ks){const d=parse(k),last=eps[eps.length-1];if(last&&diff(last.end,d)<=2)last.end=d;else eps.push({start:d,end:d})}
+  eps.forEach(e=>e.len=diff(e.start,e.end)+1);
+  return eps;
+}
+// 預測：最近 6 個週期的平均（排除 15 天以下或 60 天以上的極端值）；資料不足時用 28 天、5 天
+function cycleInfo(){
+  const eps=episodes(),T=today0();
+  const cyc=[];for(let i=1;i<eps.length;i++)cyc.push(diff(eps[i-1].start,eps[i].start));
+  const recent=cyc.slice(-6).filter(c=>c>=15&&c<=60);
+  const avgC=recent.length?Math.round(avg(recent)):28;
+  const recentL=eps.slice(-6).map(e=>e.len);
+  const avgL=recentL.length?Math.round(avg(recentL)):5;
+  const last=eps[eps.length-1];
+  if(!last)return{eps,cyc,recent,avgC,avgL,none:true};
+  const next=addD(last.start,avgC);
+  return{eps,cyc,recent,avgC,avgL,last,next,day:diff(last.start,T)+1,toNext:diff(T,next),inPeriod:T>=last.start&&T<=last.end,guessed:!recent.length};
+}
+function predictedSet(ci){
+  const set=new Set();if(ci.none)return set;
+  let st=ci.next;const T=today0();
+  if(diff(T,st)<0)st=T; // 已經晚了：從今天起標示
+  for(let c=0;c<3;c++){for(let j=0;j<ci.avgL;j++)set.add(dkey(addD(st,j)));st=addD(st,ci.avgC)}
+  return set;
+}
+// 某天屬於哪個階段：經期中／經前一週／其他
+function phaseOf(k,ci){
+  const d=parse(k);
+  for(const e of ci.eps)if(d>=e.start&&d<=e.end)return"period";
+  let nx=ci.eps.find(e=>e.start>d);
+  const nxd=nx?nx.start:(!ci.none&&d>=ci.last.start?ci.next:null);
+  if(nxd&&diff(d,nxd)<=7&&diff(d,nxd)>0)return"pre";
+  return"other";
+}
+const PHASE={period:"經期中",pre:"經前一週",other:"其他日子"};
+
+// 回顧：原型用固定規則產生；正式版交給 Claude Agent 依同樣的資料寫成文字
+function insights(ci){
+  const out=[];
+  if(ci.none){out.push({t:"還沒有經期紀錄。記下這次或上一次月經的日子，就能開始預估。"});return out}
+  if(ci.recent.length)out.push({t:"最近 "+ci.recent.length+" 個週期平均 "+ci.avgC+" 天（"+Math.min(...ci.recent)+" 到 "+Math.max(...ci.recent)+" 天），經期平均 "+ci.avgL+" 天。"});
+  else out.push({t:"目前只有一次經期紀錄，先用 28 天估算。再記一次就能用你自己的週期。"});
+  const odd=ci.recent.filter(c=>c<21||c>35);
+  if(odd.length)out.push({flag:true,t:"有 "+odd.length+" 個週期不在一般的 21 到 35 天範圍內（"+odd.join("、")+" 天）。偶爾一次常見，連續發生建議問問醫師。"});
+  if(ci.recent.length>=3&&Math.max(...ci.recent)-Math.min(...ci.recent)>=8)out.push({flag:true,t:"週期長短相差 "+(Math.max(...ci.recent)-Math.min(...ci.recent))+" 天，算是比較不規律，預估日期的誤差會比較大。"});
+  const longP=ci.eps.slice(-6).filter(e=>e.len>7);
+  if(longP.length)out.push({flag:true,t:"有 "+longP.length+" 次經期超過 7 天。如果經常這樣，建議就醫檢查。"});
+  const severe=ci.eps.filter(e=>{for(let d=e.start;d<=e.end;d=addD(d,1))if((getDay(dkey(d)).sym||[]).includes("經痛很嚴重"))return true;return false}).length;
+  if(severe>=2)out.push({flag:true,t:"有 "+severe+" 次經期記了「經痛很嚴重」。痛到影響上課或需要吃止痛藥才撐得住，可以到保健中心或婦產科諮詢。"});
+  if(ci.toNext<-7)out.push({flag:true,t:"已經比預估晚了 "+(-ci.toNext)+" 天。"});
+  const by={period:[],pre:[],other:[]};
+  for(const[k,v]of Object.entries(HD.days))if(v.mood)by[phaseOf(k,ci)].push(v.mood);
+  const a={period:avg(by.period),pre:avg(by.pre),other:avg(by.other)};
+  if(a.pre!=null&&a.other!=null&&by.pre.length>=3&&a.other-a.pre>=0.7)
+    out.push({t:"經前一週的心情平均 "+a.pre.toFixed(1)+" 分，比其他日子低 "+(a.other-a.pre).toFixed(1)+" 分。下次預估日前一週，可以少排一點硬仗。"});
+  else if(by.pre.length<3)out.push({t:"心情紀錄再多幾天，就能看出它跟週期有沒有關係。"});
+  return out;
+}
+
+// ===== 補給地圖（與好朋友地圖網頁共用同一個 API 與規則）=====
+function seedMap(){const n=Date.now();return[
+  {loc:"cph-1f",lv:"full",at:n-15*MIN},{loc:"cph-1f",lv:"full",at:n-3*H},
+  {loc:"cph-2f",lv:"empty",at:n-40*MIN},
+  {loc:"cph-3f",lv:"low",at:n-25*MIN},{loc:"cph-3f",lv:"full",at:n-5*H},
+  {loc:"cph-4f",lv:"empty",at:n-20*MIN},{loc:"cph-4f",lv:"full",at:n-35*MIN},
+  {loc:"cph-5f",lv:"full",at:n-9*H},
+  {loc:"cph-6f",lv:"full",at:n-50*MIN},
+  {loc:"cph-7f",lv:"low",at:n-70*MIN}
+].map(r=>({...r,demo:true}))}
+let reports=LIVE?[]:seedMap(), loadedAt=0, loadErr=false;
+let device;try{device=localStorage.getItem(MKEY+"-device")}catch(e){}
+if(!device){device=(crypto.randomUUID?.()||Math.random().toString(36).slice(2)+Date.now().toString(36));try{localStorage.setItem(MKEY+"-device",device)}catch(e){}}
+let mine=load(MKEY+"-mine")||{};
+function markMine(id,at){mine[id]=at;store(MKEY+"-mine",mine)}
+async function pull(){
+  try{const r=await fetch(CONFIG.apiUrl+"/reports",{cache:"no-store"});if(!r.ok)throw new Error(r.status);
+    reports=(await r.json()).reports;loadedAt=Date.now();loadErr=false}
+  catch(e){loadErr=true}
+}
+const status=id=>rule(reports,id);
+
+// ===== LINE（LIFF）與遊戲進度 =====
+// 進度先存在這支手機；從 LINE 開啟時再和伺服器合併，換手機也找得回徽章
+let GP=merge(load(GKEY)||{},{}), liff=null, syncNote="";
+function saveG(patch){GP=merge(GP,patch);store(GKEY,GP);pushProgress()}
+async function idToken(){try{return liff?.isLoggedIn()?liff.getIDToken():null}catch(e){return null}}
+async function pushProgress(){
+  const tok=await idToken();if(!tok||!LIVE)return;
+  try{const r=await fetch(CONFIG.apiUrl+"/progress",{method:"PUT",headers:{"content-type":"application/json",authorization:"Bearer "+tok},body:JSON.stringify({progress:GP})});
+    if(r.ok){GP=merge(GP,(await r.json()).progress);store(GKEY,GP);syncNote="已和你的 LINE 帳號同步"}}
+  catch(e){syncNote="暫時無法同步，進度先存在這支手機"}
+}
+async function initLiff(){
+  if(!LIVE)return;
+  let id="";try{id=(await fetch(CONFIG.apiUrl+"/config").then(r=>r.json())).liffId}catch(e){}
+  if(!id)return;
+  await new Promise((ok,no)=>{const sc=document.createElement("script");sc.src="https://static.line-scdn.net/liff/edge/2/sdk.js";sc.onload=ok;sc.onerror=no;document.head.append(sc)}).catch(()=>{});
+  if(!window.liff)return;
+  try{await window.liff.init({liffId:id});liff=window.liff}catch(e){return}
+  if(liff.isLoggedIn())await pushProgress();
+}
+// LINE 選單的連結是 liff.line.me/<ID>?tab=game，打開後換成對應分頁
+function tabFromQuery(){const t=new URLSearchParams(location.search).get("tab");if(t&&!location.hash)history.replaceState(null,"",location.pathname+location.search+"#"+t)}
+
+// ===== 共用元件 =====
+function moodScale(cur,onpick){
+  const btns=[1,2,3,4,5].map(v=>h("button",{class:"mbtn",style:"--mc:var(--m"+v+")","aria-pressed":String(cur===v),onclick:()=>{const nv=cur===v?null:v;cur=nv;btns.forEach((b,i)=>b.setAttribute("aria-pressed",String(nv===i+1)));onpick(nv)}},h("i",{"aria-hidden":"true"}),MOODS[v]));
+  return h("div",{class:"mscale",role:"group","aria-label":"心情"},...btns);
+}
+function flowPicker(cur,onpick){
+  const keys=Object.keys(FLOW);
+  const btns=keys.map(k=>h("button",{class:"fbtn","aria-pressed":String((cur||"none")===k),onclick:()=>{btns.forEach((b,i)=>b.setAttribute("aria-pressed",String(keys[i]===k)));onpick(k==="none"?null:k)}},FLOW[k]));
+  return h("div",{class:"flows",role:"group","aria-label":"經血量"},...btns);
+}
+function chipPicker(opts,cur,onchange){
+  const set=new Set(cur||[]);
+  return h("div",{class:"chips"},...opts.map(o=>h("button",{class:"chipbtn","aria-pressed":String(set.has(o)),onclick:e=>{set.has(o)?set.delete(o):set.add(o);e.currentTarget.setAttribute("aria-pressed",String(set.has(o)));onchange([...set])}},o)));
+}
+function savedLine(){const el=h("p",{class:"saved","aria-live":"polite"});let t;el.flash=msg=>{el.textContent=msg;clearTimeout(t);t=setTimeout(()=>el.textContent="",2000)};return el}
+function demoBanner(){
+  if(!HD.demo&&!Object.keys(HD.days).length)return h("div",{class:"demo"},h("span",{},"還沒有紀錄。"),
+    h("button",{onclick:()=>{HD=seedHealth();saveH();route()}},"先載入示範資料看看效果"));
+  if(!HD.demo)return null;
+  return h("div",{class:"demo"},h("span",{},"目前是示範資料，方便看效果。"),
+    h("button",{onclick:()=>{HD={days:{},demo:false};saveH();route()}},"清空，開始記錄我自己的"));
+}
+
+// ===== 今天 =====
+function viewToday(){
+  const ci=cycleInfo(),T=today0(),tk=dkey(T),td=getDay(tk);
+  const hero=h("div",{class:"card hero"});
+  if(ci.none){
+    hero.append(h("div",{class:"next"},"還沒有經期紀錄",h("small",{},"月經來的那天，在下面選「經血量」就會開始計算。")));
+  }else{
+    const late=ci.toNext<0&&!ci.inPeriod;
+    hero.append(
+      h("div",{class:"day"},h("span",{},"週期第"),h("b",{},String(ci.day)),h("span",{},"天"+(ci.inPeriod?"・經期中":""))),
+      h("div",{class:"next"},
+        ci.inPeriod?"預計 "+md(addD(ci.last.start,Math.max(ci.avgL,diff(ci.last.start,T)+1)-1))+" 左右結束":late?"比預估晚了 "+(-ci.toNext)+" 天":"預計 "+md(ci.next)+"（週"+WK[ci.next.getDay()]+"）來",
+        h("small",{},ci.inPeriod?"下次預計 "+md(ci.next):late?"預估日是 "+md(ci.next)+"，壓力、作息改變都可能讓月經延後":"還有 "+ci.toNext+" 天"+(ci.toNext<=7?"，已進入經前一週":""))));
+    // 週期條：經期／一般／經前一週，標出今天
+    const L=Math.max(ci.avgC,ci.day),pw=ci.avgL/L*100,ww=Math.min(7,ci.avgC-ci.avgL)/L*100;
+    const pos=Math.min(100,(ci.day-.5)/L*100);
+    hero.append(h("div",{},
+      h("div",{class:"cmark"},h("span",{style:"left:"+Math.max(4,Math.min(96,pos))+"%"},"今天 ▾")),
+      h("div",{class:"cbar","aria-hidden":"true"},h("i",{class:"p",style:"width:"+pw+"%"}),h("i",{class:"r",style:"width:"+(100-pw-ww)+"%"}),h("i",{class:"w",style:"width:"+ww+"%"})),
+      h("div",{class:"legend",style:"margin-top:8px"},h("span",{},h("i",{style:"background:var(--accent)"}),"經期"),h("span",{},h("i",{style:"background:var(--pre)"}),"經前一週"),h("span",{},"平均週期 "+ci.avgC+" 天"+(ci.guessed?"（預設值）":"")))));
+  }
+  // 快速紀錄
+  const sv=savedLine();
+  const quick=h("div",{class:"card"},
+    h("p",{class:"lbl"},"今天的心情"),moodScale(td.mood||null,v=>{setDay(tk,{mood:v});sv.flash(v?"已記下：心情「"+MOODS[v]+"」":"已清除今天的心情")}),
+    h("p",{class:"lbl"},"今天的經血量"),flowPicker(td.flow,v=>{setDay(tk,{flow:v});sv.flash(v?"已記下：經血量「"+FLOW[v]+"」":"已記下：今天沒有月經");refreshTodayHero()}),
+    sv,
+    h("p",{class:"note"},"症狀、心情標籤和備註可以到「經期」或「心情」補記。"));
+  // 補給地圖
+  const st=LOCS.map(l=>({l,s:status(l.id)})),avail=st.filter(x=>["full","low"].includes(x.s.key));
+  const near=!ci.none&&(ci.inPeriod||(ci.toNext>=0&&ci.toNext<=3)||ci.toNext<0);
+  const supply=h("a",{class:"card supply",href:"#map",style:"text-decoration:none;color:inherit"},
+    h("div",{style:"min-width:0"},h("div",{style:"font-weight:700"},near?"快到了，先看看哪裡有":"公衛學院大樓補給點"),
+      h("div",{class:"note",style:"margin:0"},avail.length?"最近有庫存："+avail.sort((a,b)=>a.s.rank-b.s.rank).slice(0,3).map(x=>x.l.bldg).join("、"):"目前沒有回報有庫存的樓層")),
+    h("div",{style:"text-align:right;flex:none"},h("b",{},String(avail.length)),h("div",{class:"note",style:"margin:0"},"/ "+LOCS.length+" 點有庫存")));
+  // 回顧
+  const ins=insights(ci);
+  const review=h("div",{class:"card"},
+    h("ul",{class:"insights"},...ins.map(x=>h("li",{class:x.flag?"flag":""},x.t))),
+    h("p",{class:"note"},"這段由固定規則在你的手機上產生，資料不會上傳。這不是醫療診斷。"));
+  app.replaceChildren(demoBanner(),hero,h("h2",{class:"sec"},"快速紀錄"),quick,h("h2",{class:"sec"},near?"補給提醒":"補給地圖"),supply,h("h2",{class:"sec"},"我的回顧"),review,h("h2",{class:"sec"},"資料與隱私"),dataCard());
+  function refreshTodayHero(){const y=scrollY;viewToday();scrollTo(0,y)}
+}
+function dataCard(){
+  const box=h("div",{});
+  const exp=h("button",{class:"btn",onclick:()=>{
+    const txt=JSON.stringify({exported:new Date().toISOString(),days:HD.days},null,1);
+    const show=()=>{box.replaceChildren(h("p",{class:"note"},"無法自動複製，請長按下方文字全選後複製。"),h("textarea",{class:"out",readonly:"",id:"export-text"},txt));box.querySelector("textarea").select()};
+    try{navigator.clipboard.writeText(txt).then(()=>box.replaceChildren(h("p",{class:"saved"},"已複製到剪貼簿（共 "+Object.keys(HD.days).length+" 天的紀錄）")),show)}catch(e){show()}
+  }},"複製我的資料");
+  const del=h("button",{class:"btn danger",onclick:()=>{
+    box.replaceChildren(h("p",{style:"margin:8px 0"},"確定要刪除這支手機上所有的經期與心情紀錄？刪除後無法復原。"),
+      h("div",{class:"btnrow"},h("button",{class:"btn danger",onclick:()=>{HD={days:{},demo:false};saveH();route()}},"確定刪除"),h("button",{class:"btn",onclick:()=>box.replaceChildren()},"取消")));
+  }},"刪除全部紀錄");
+  return h("div",{class:"card"},
+    h("p",{style:"margin:0"},"你的經期與心情紀錄只存在這支手機的瀏覽器裡，不會上傳。換手機前可以先複製備份。"),
+    h("div",{class:"btnrow",style:"margin-top:12px"},exp,del),box);
+}
+
+// ===== 經期 =====
+let calMonth=null,selKey=null;
+function viewCycle(){
+  const T=today0();
+  if(!calMonth)calMonth=new Date(T.getFullYear(),T.getMonth(),1);
+  if(!selKey)selKey=dkey(T);
+  const ci=cycleInfo(),pred=predictedSet(ci);
+  const first=calMonth,startPad=first.getDay(),nDays=new Date(first.getFullYear(),first.getMonth()+1,0).getDate();
+  const cells=[];
+  for(let i=0;i<startPad;i++)cells.push(h("span",{class:"cell out","aria-hidden":"true"}));
+  for(let d=1;d<=nDays;d++){
+    const dt=new Date(first.getFullYear(),first.getMonth(),d),k=dkey(dt),v=getDay(k);
+    const cls=["cell"];
+    if(v.flow&&v.flow!=="spot")cls.push("per");else if(pred.has(k)&&dt>=T)cls.push("pred");
+    if(k===dkey(T))cls.push("today");if(k===selKey)cls.push("sel");
+    const label=md(dt)+(v.flow?"，"+FLOW[v.flow]:"")+(pred.has(k)&&!v.flow&&dt>=T?"，預估經期":"")+(v.mood?"，心情"+MOODS[v.mood]:"");
+    cells.push(h("button",{class:cls.join(" "),"aria-label":label,onclick:()=>{selKey=k;const y=scrollY;viewCycle();scrollTo(0,y)}},String(d),v.mood?h("span",{class:"md",style:"--mc:var(--m"+v.mood+")"}):null));
+  }
+  const shift=n=>{calMonth=new Date(calMonth.getFullYear(),calMonth.getMonth()+n,1);viewCycle()};
+  const sd=parse(selKey),sv=getDay(selKey),saved=savedLine();
+  const future=sd>T;
+  const editor=h("div",{class:"card"},
+    h("p",{class:"lbl"},md(sd)+"（週"+WK[sd.getDay()]+"）"+(selKey===dkey(T)?"・今天":"")),
+    future?h("p",{class:"note",style:"margin:0"},"這天還沒到，到了再記。"):h("div",{},
+      h("p",{class:"lbl"},"經血量"),flowPicker(sv.flow,v=>{setDay(selKey,{flow:v});const y=scrollY;viewCycle();scrollTo(0,y)}),
+      h("p",{class:"lbl"},"症狀"),chipPicker(SYMS,sv.sym,v=>{setDay(selKey,{sym:v});saved.flash("已儲存")}),
+      saved));
+  const st=[
+    [ci.none?"—":ci.avgC+" 天","平均週期"],
+    [ci.none?"—":ci.avgL+" 天","平均經期"],
+    [ci.none?"—":md(ci.next),"下次預估"]];
+  const hist=ci.eps.slice(-6).reverse();
+  app.replaceChildren(demoBanner(),
+    h("div",{class:"stats"},...st.map(([b,t])=>h("div",{class:"stat"},h("b",{},b),h("small",{},t)))),
+    h("div",{class:"calhead"},h("button",{"aria-label":"上個月",onclick:()=>shift(-1)},"‹"),h("b",{},first.getFullYear()+" 年 "+(first.getMonth()+1)+" 月"),h("button",{"aria-label":"下個月",onclick:()=>shift(1)},"›")),
+    h("div",{class:"cal"},...[...WK].map(w=>h("span",{class:"wd"},w)),...cells),
+    h("div",{class:"legend",style:"margin-top:10px"},
+      h("span",{},h("i",{style:"background:var(--accent)"}),"有記錄的經期"),
+      h("span",{},h("i",{style:"border:2px dashed var(--accent);width:10px;height:10px"}),"預估經期"),
+      h("span",{},h("i",{style:"background:var(--m4);border-radius:50%"}),"心情點")),
+    h("h2",{class:"sec"},"點日期來記錄"),editor,
+    h("h2",{class:"sec"},"最近幾次"),
+    hist.length?h("div",{class:"card notes"},...hist.map((e,i)=>{const nx=ci.eps[ci.eps.length-hist.length+ (hist.length-1-i)+1];return h("div",{},h("small",{},md(e.start)+"–"+md(e.end)),"經期 "+e.len+" 天"+(nx?"・週期 "+diff(e.start,nx.start)+" 天":"・本次週期進行中"))})):h("p",{class:"note"},"還沒有紀錄。"),
+    h("p",{class:"note"},"預估只供參考，不能當作避孕依據。週期少於 21 天、多於 35 天，或經期超過 7 天時，回顧裡會提醒你。"));
+}
+
+// ===== 心情 =====
+let moodKey=null;
+function viewMood(){
+  const T=today0();if(!moodKey)moodKey=dkey(T);
+  const ci=cycleInfo(),v=getDay(moodKey),saved=savedLine();
+  const dateIn=h("input",{type:"date",id:"mood-date",value:moodKey,max:dkey(T),style:"font:inherit;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg)"});
+  dateIn.addEventListener("change",()=>{if(dateIn.value&&parse(dateIn.value)<=T){moodKey=dateIn.value;viewMood()}});
+  const memo=h("textarea",{class:"memo",id:"mood-note",placeholder:"發生了什麼事？（選填，只存在這支手機）"},v.note||"");
+  memo.addEventListener("change",()=>{setDay(moodKey,{note:memo.value.trim()});saved.flash("已儲存備註")});
+  const editor=h("div",{class:"card"},
+    h("div",{style:"display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"},h("p",{class:"lbl",style:"margin:0"},"哪一天"),dateIn),
+    h("p",{class:"lbl"},"心情"),moodScale(v.mood||null,m=>{setDay(moodKey,{mood:m});saved.flash("已儲存");drawChart()}),
+    h("p",{class:"lbl"},"感覺（可複選）"),chipPicker(MTAGS,v.tags,t=>{setDay(moodKey,{tags:t});saved.flash("已儲存")}),
+    h("p",{class:"lbl"},"備註"),memo,saved);
+  const chartBox=h("div",{class:"card"});
+  const phaseBox=h("div",{class:"card stack"});
+  function drawChart(){
+    const W=360,Ht=170,L=40,R=8,Tp=10,B=24,N=30;
+    const x=i=>L+i*(W-L-R)/(N-1),y=m=>Tp+(5-m)*(Ht-Tp-B)/4;
+    const svg=s("svg",{class:"chart",viewBox:"0 0 "+W+" "+Ht,role:"img","aria-label":"最近 30 天心情與經期"});
+    const days=[...Array(N)].map((_,i)=>addD(T,i-N+1));
+    days.forEach((d,i)=>{const dv=getDay(dkey(d));if(dv.flow&&dv.flow!=="spot")svg.append(s("rect",{x:x(i)-(W-L-R)/(N-1)/2,y:Tp-4,width:(W-L-R)/(N-1),height:Ht-Tp-B+8,fill:"var(--accent-soft)"}))});
+    [1,3,5].forEach(m=>{svg.append(s("line",{x1:L,x2:W-R,y1:y(m),y2:y(m),stroke:"var(--line)","stroke-width":1}));svg.append(s("text",{x:L-8,y:y(m)+4,"text-anchor":"end"},MOODS[m]))});
+    days.forEach((d,i)=>{if(i%7===2||i===N-1)svg.append(s("text",{x:i===N-1?W-R:x(i),y:Ht-8,"text-anchor":i===N-1?"end":"middle"},i===N-1?"今天":md(d)))});
+    const pts=days.map((d,i)=>({i,m:getDay(dkey(d)).mood})).filter(p=>p.m);
+    if(pts.length>1)svg.append(s("polyline",{points:pts.map(p=>x(p.i)+","+y(p.m)).join(" "),fill:"none",stroke:"var(--muted)","stroke-width":1.5,"stroke-linejoin":"round",opacity:.6}));
+    pts.forEach(p=>svg.append(s("circle",{cx:x(p.i),cy:y(p.m),r:p.i===N-1?4.5:3.2,fill:"var(--m"+p.m+")",stroke:"var(--surface)","stroke-width":1.5})));
+    chartBox.replaceChildren(svg,h("div",{class:"legend",style:"margin-top:6px"},h("span",{},h("i",{style:"background:var(--accent-soft);border:1px solid var(--accent)"}),"經期"),h("span",{},pts.length+" 天有心情紀錄")));
+    // 依週期階段的平均心情
+    const by={period:[],pre:[],other:[]};
+    for(const[k,dv]of Object.entries(HD.days))if(dv.mood)by[phaseOf(k,ci)].push(dv.mood);
+    phaseBox.replaceChildren(...Object.keys(PHASE).map(p=>{const a=avg(by[p]);return h("div",{class:"phase"},h("span",{},PHASE[p]),
+      h("div",{class:"bar"},h("i",{style:"width:"+(a?((a-1)/4*100):0)+"%;background:"+(p==="period"?"var(--accent)":p==="pre"?"var(--pre)":"var(--m3)")})),h("b",{},a?a.toFixed(1):"—"))}),
+      h("p",{class:"note",style:"margin:0"},"平均心情（1 很差到 5 很好）。資料越多越準；樣本少的時候僅供參考。"));
+  }
+  drawChart();
+  const notes=Object.entries(HD.days).filter(([k,dv])=>dv.note).sort((a,b)=>a[0]<b[0]?1:-1).slice(0,5);
+  app.replaceChildren(demoBanner(),h("h2",{class:"sec"},"記錄心情"),editor,
+    h("h2",{class:"sec"},"最近 30 天"),chartBox,
+    h("h2",{class:"sec"},"心情和週期的關係"),phaseBox,
+    notes.length?h("h2",{class:"sec"},"最近的備註"):null,
+    notes.length?h("div",{class:"card notes"},...notes.map(([k,dv])=>h("div",{},h("small",{},md(parse(k))),dv.note))):null,
+    h("p",{class:"note"},"如果低落、焦慮持續兩週以上，或有傷害自己的念頭，請找信任的人聊聊，或撥打安心專線 1925（24 小時）。"));
+}
+
+// ===== 補給地圖（總覽／回報／QR）=====
+let filter="all";
+function viewMap(){
+  const st=LOCS.map(l=>({l,s:status(l.id)}));
+  const n=k=>st.filter(x=>k.includes(x.s.key)).length;
+  app.replaceChildren(
+    reports.some(r=>r.demo)?h("div",{class:"demo"},"地圖目前顯示示範資料。"):null,
+    loadErr?h("div",{class:"demo"},"暫時連不上回報資料，畫面可能不是最新的。請稍後重新整理。"):null,
+    h("div",{class:"summary"},
+      h("div",{class:"stat"},h("b",{style:"color:var(--ok)"},String(n(["full","low"]))),h("small",{},"點有庫存")),
+      h("div",{class:"stat"},h("b",{style:"color:var(--out)"},String(n(["empty"]))),h("small",{},"點已用完")),
+      h("div",{class:"stat"},h("b",{style:"color:var(--unk)"},String(n(["stale","conflict","none"]))),h("small",{},"點待確認"))),
+    h("div",{class:"filters"},...[["all","全部地點"],["avail","只看有庫存"]].map(([k,t])=>h("button",{class:"chipbtn","aria-pressed":String(filter===k),onclick:()=>{filter=k;viewMap()}},t))),
+    ...groups(st.filter(x=>filter==="all"||["full","low"].includes(x.s.key))),
+    h("p",{class:"note",style:"margin-top:20px"},"在補給點旁掃 QR 碼也能回報。",h("a",{class:"link",href:"./#qr"},"各點 QR 碼"),"（給補貨窗口張貼用）"));
+}
+function groups(st){
+  if(!st.length)return[h("p",{class:"note"},"目前沒有回報有庫存的地點。可以切回「全部地點」看待確認的點。")];
+  const by={};st.forEach(x=>(by[x.l.bldg]??=[]).push(x));
+  return Object.entries(by).map(([b,xs])=>h("section",{class:"group"},h("h2",{},b+(xs[0].l.unit?"・"+xs[0].l.unit:"")),h("div",{class:"list"},...xs.sort((p,q)=>p.s.rank-q.s.rank).map(({l,s})=>
+    h("div",{class:"row "+s.cls},h("span",{class:"dot","aria-hidden":"true"}),
+      h("div",{class:"meta"},h("div",{class:"name"},l.spot),
+        h("div",{class:"sub"},s.rs.length?h("span",{class:"t"},ago(s.rs[0].at)):"還沒有人回報"," ・ "+l.src+"提供"),
+        s.why?h("div",{class:"sub"},s.why):null),
+      h("div",{class:"row-right"},h("span",{class:"pill"},s.label),h("a",{class:"go",href:"#r-"+l.id},"回報")))))));
+}
+function viewReport(id){
+  const l=LOCS.find(x=>x.id===id);
+  if(!l){app.replaceChildren(h("p",{class:"note"},"找不到這個地點，QR 碼可能已經更換。"),h("a",{class:"link",href:"#map"},"回到地圖"));return}
+  let pick=null;const kinds=new Set(),st=status(id);
+  const cooling=mine[id]&&Date.now()-mine[id]<COOLDOWN_MIN*MIN;
+  const err=h("p",{class:"note",role:"alert",style:"color:var(--out)"});
+  const btn=h("button",{class:"submit",disabled:""},"送出回報");
+  const choices=Object.entries(LEVEL).map(([k,v])=>h("button",{class:"choice "+v.cls,"aria-pressed":"false",onclick:e=>{pick=k;choices.forEach(c=>c.setAttribute("aria-pressed",String(c===e.currentTarget)));btn.disabled=!!cooling}},
+    h("span",{class:"dot","aria-hidden":"true"}),h("span",{},h("b",{},v.t),h("small",{},v.d))));
+  btn.addEventListener("click",async()=>{
+    const r={loc:id,lv:pick,kinds:[...kinds],at:Date.now()};
+    if(LIVE){
+      btn.disabled=true;btn.textContent="送出中…";err.textContent="";
+      try{const res=await fetch(CONFIG.apiUrl+"/reports",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({...r,device})});
+        const out=await res.json().catch(()=>({}));
+        if(!res.ok)throw new Error(out.error||"送出失敗，請再試一次。");
+        r.at=out.report.at}
+      catch(e){err.textContent=e.message.includes("fetch")?"網路不穩，請再試一次。":e.message;btn.disabled=false;btn.textContent="送出回報";return}
+    }
+    reports.push(r);markMine(id,r.at);
+    const first=!(GP.reports>0);saveG({reports:(GP.reports||0)+1});
+    app.replaceChildren(h("div",{class:"thanks"},h("h3",{},"謝謝你的回報"),
+      h("p",{},l.bldg+" "+l.spot+" 現在顯示為「"+status(id).label+"」，下一位同學查得到了。"),
+      first?h("p",{},"🗺️ 你拿到了「補給守護者」徽章！"):null,
+      h("a",{class:"link",href:"#map"},"看看其他地點")));
+  });
+  app.replaceChildren(h("div",{class:"rep"},
+    h("h2",{},l.bldg),h("p",{class:"where"},l.spot+"・"+(l.unit||l.src+"提供")),
+    h("p",{class:"now"},st.rs.length?"目前顯示「"+st.label+"」，最後回報 "+ago(st.rs[0].at):"這裡還沒有人回報過"),
+    h("p",{class:"q"},"這個點現在的狀況？"),h("div",{class:"choices"},...choices),
+    h("p",{class:"q"},"有哪些種類？（選填）"),
+    h("div",{class:"chips"},...KINDS.map(k=>h("button",{class:"chipbtn","aria-pressed":"false",onclick:e=>{kinds.has(k)?kinds.delete(k):kinds.add(k);e.currentTarget.setAttribute("aria-pressed",String(kinds.has(k)))}},k))),
+    btn,err,h("p",{class:"note"},cooling?"你剛剛回報過這裡，"+COOLDOWN_MIN+" 分鐘後可以再回報。":"不需要登入，也不會記錄你的身分。")));
+}
+// ===== 科普遊戲 =====
+const ABCD="ABCD";
+function gcard(href,icon,title,sub,tag,locked){
+  return h(locked?"div":"a",{class:"card gcard"+(locked?" locked":""),...(locked?{}:{href})},h("span",{class:"gi","aria-hidden":"true"},icon),
+    h("span",{style:"min-width:0"},h("b",{},title),h("small",{},sub)),tag?h("span",{class:"tag"},tag):null);
+}
+function viewGame(){
+  const lv=GAME.levels, passed=lv.filter(l=>GP.done[l.id]).length;
+  const dq=dailyQuestion(GAME), answered=GP.days.includes(taipeiDay());
+  app.replaceChildren(
+    h("div",{class:"prog"},h("span",{},"闖關進度 "+passed+" / "+lv.length),h("a",{class:"link",href:"#badges"},"徽章 "+earned(GP).length+" / "+BADGES.length)),
+    h("div",{class:"pbar"},h("i",{style:"width:"+passed/lv.length*100+"%"})),
+    h("h2",{class:"sec"},"今日一題"),
+    gcard("#daily","📝",answered?"今天答過了":"今天的題目",dq.q,answered?"✓":null),
+    h("h2",{class:"sec"},"好朋友闖關"),
+    h("div",{class:"lvlist"},...lv.map((l,i)=>{const locked=i>0&&!GP.done[lv[i-1].id]&&!GP.done[l.id];
+      return gcard("#lv-"+l.id,locked?"🔒":BADGES.find(b=>b.id===l.id).icon,"第 "+(i+1)+" 關・"+l.name,locked?"先通過上一關就能解鎖":l.intro,GP.done[l.id]?"✓ "+GP.best[l.id]+"/"+l.qs.length:null,locked)})),
+    h("h2",{class:"sec"},"更多玩法"),
+    h("div",{class:"lvlist"},
+      gcard("#sim","📅","一個月模擬","陪小月過完一個週期，遇到狀況時你會怎麼做？",GP.sim>=0?"✓ "+GP.sim+"/"+GAME.sim.length:null),
+      gcard("#myth","🔍","迷思是真是假","10 個常見說法，你分得出來嗎？可以分享給朋友挑戰",GP.myth?"最佳 "+GP.myth+"/"+GAME.myths.length:null)),
+    h("p",{class:"note",style:"margin-top:20px"},GAME.source));
+}
+// 一題一題作答，答完馬上看解說；答錯不扣分
+function quizRun(qs,{title,onEnd}){
+  let i=0,score=0;
+  function step(){
+    const q=qs[i];
+    const fb=h("div",{});
+    const opts=q.opts.map((o,j)=>h("button",{class:"opt",onclick:()=>{
+      opts.forEach((b,k)=>{b.disabled=true;if(k===q.a)b.classList.add("right");else if(k===j)b.classList.add("wrong")});
+      if(j===q.a)score++;
+      fb.replaceChildren(h("div",{class:"fb "+(j===q.a?"ok":"no"),role:"status"},h("b",{},j===q.a?"答對了！":"答案是 "+ABCD[q.a]),q.why),
+        h("button",{class:"submit",onclick:()=>{i++;i<qs.length?step():onEnd(score)}},i<qs.length-1?"下一題":"看結果"));
+      fb.querySelector(".submit").focus();
+    }},h("span",{class:"k"},ABCD[j]),h("span",{},o)));
+    app.replaceChildren(
+      h("div",{class:"prog"},h("span",{},title),h("span",{},(i+1)+" / "+qs.length)),
+      h("div",{class:"pbar"},h("i",{style:"width:"+i/qs.length*100+"%"})),
+      h("p",{class:"qtext"},q.q),h("div",{class:"stack"},...opts),fb);
+  }
+  step();
+}
+function endScreen(icon,title,msg,...extra){
+  app.replaceChildren(h("div",{class:"end"},h("div",{class:"big","aria-hidden":"true"},icon),h("h3",{},title),h("p",{},msg)),...extra,
+    h("div",{class:"btnrow",style:"justify-content:center;margin-top:16px"},h("a",{class:"btn",href:"#game",style:"text-decoration:none"},"回到遊戲"),h("a",{class:"btn primary",href:"#badges",style:"text-decoration:none"},"看我的徽章")));
+}
+function viewLevel(id){
+  const lv=GAME.levels, i=lv.findIndex(l=>l.id===id), l=lv[i];
+  if(!l){location.hash="#game";return}
+  if(i>0&&!GP.done[lv[i-1].id]&&!GP.done[id]){location.hash="#game";return}
+  quizRun(l.qs,{title:"第 "+(i+1)+" 關・"+l.name,onEnd:score=>{
+    const pass=score>=PASS, first=pass&&!GP.done[id];
+    saveG({best:{[id]:score},done:pass?{[id]:true}:{}});
+    const b=BADGES.find(x=>x.id===id), nx=lv[i+1];
+    endScreen(pass?b.icon:"💪",pass?(first?"過關！拿到「"+b.name+"」徽章":"過關！"):"差一點",
+      "答對 "+score+" / "+l.qs.length+" 題"+(pass?"。":"，答對 "+PASS+" 題就能過關，再試一次吧。"),
+      pass&&nx?h("p",{style:"text-align:center"},h("a",{class:"link",href:"#lv-"+nx.id},"下一關：「"+nx.name+"」 →")):null);
+  }});
+}
+function viewDaily(){
+  const q=dailyQuestion(GAME);
+  quizRun([q],{title:"今日一題・"+taipeiDay().slice(5).replace("-","/"),onEnd:score=>{
+    saveG({days:[taipeiDay()]});
+    const n=GP.days.length;
+    endScreen(score?"⭕":"📚",score?"答對了":"明天再挑戰","你已經回答 "+n+" 天的今日一題"+(n>=7?"，拿到「每日一題 7 天」徽章！":"，累積 7 天可以拿徽章。在 LINE 傳「今日一題」也能作答。"));
+  }});
+}
+function viewMyth(){
+  const ms=GAME.myths;let i=0,score=0;
+  function step(){
+    const m=ms[i], fb=h("div",{});
+    const pick=v=>{
+      btns.forEach(b=>b.disabled=true);const ok=v===m.truth;if(ok)score++;
+      fb.replaceChildren(h("div",{class:"fb "+(ok?"ok":"no"),role:"status"},h("b",{},(ok?"答對了！":"答錯了，")+"這是"+(m.truth?"真的":"迷思")),m.why),
+        h("button",{class:"submit",onclick:()=>{i++;i<ms.length?step():done()}},i<ms.length-1?"下一張":"看結果"));
+      fb.querySelector(".submit").focus();
+    };
+    const btns=[h("button",{onclick:()=>pick(true)},"⭕ 真的"),h("button",{onclick:()=>pick(false)},"❌ 迷思")];
+    app.replaceChildren(h("div",{class:"prog"},h("span",{},"迷思是真是假"),h("span",{},(i+1)+" / "+ms.length)),
+      h("div",{class:"pbar"},h("i",{style:"width:"+i/ms.length*100+"%"})),
+      h("div",{class:"myth"},m.t),h("div",{class:"tf"},...btns),fb);
+  }
+  function done(){
+    const first=score>=ms.length&&!(GP.myth>=ms.length);
+    saveG({myth:score});
+    const msg="我在「好朋友 Pal」迷思是真是假答對 "+score+" / "+ms.length+" 題，你分得出來嗎？";
+    const share=h("button",{class:"btn primary",onclick:()=>shareText(msg+" "+shareUrl("myth"),share)},"分享給朋友挑戰");
+    endScreen(score>=ms.length?"🔍":"🧠",first?"全對！拿到「迷思破解王」徽章":"答對 "+score+" / "+ms.length+" 題",
+      score>=ms.length?"這些迷思都難不倒你。":"全部答對就能拿到「迷思破解王」徽章。",h("div",{class:"btnrow",style:"justify-content:center"},share));
+  }
+  step();
+}
+function shareUrl(tab){return liff?"https://liff.line.me/"+liff.id+"?tab="+tab:location.origin+location.pathname+"#"+tab}
+// 在 LINE 裡用 shareTargetPicker 傳給朋友；其他瀏覽器用系統分享或複製
+async function shareText(t,btn){
+  try{
+    if(liff?.isApiAvailable?.("shareTargetPicker")){await liff.shareTargetPicker([{type:"text",text:t}]);return}
+    if(navigator.share){await navigator.share({text:t});return}
+    await navigator.clipboard.writeText(t);btn.textContent="已複製，貼給朋友吧";
+  }catch(e){}
+}
+function viewSim(){
+  const sc=GAME.sim;let i=0,good=0;
+  function step(){
+    const c=sc[i], fb=h("div",{});
+    const opts=c.opts.map(o=>h("button",{class:"opt",onclick:e=>{
+      opts.forEach((b,k)=>{b.disabled=true;if(c.opts[k].good)b.classList.add("right")});
+      if(!o.good)e.currentTarget.classList.add("wrong");else good++;
+      fb.replaceChildren(h("div",{class:"fb "+(o.good?"ok":"no"),role:"status"},h("b",{},o.good?"好選擇":"可以更好"),o.why),
+        h("button",{class:"submit",onclick:()=>{i++;i<sc.length?step():done()}},i<sc.length-1?"下一天":"看結果"));
+      fb.querySelector(".submit").focus();
+    }},h("span",{},o.t)));
+    app.replaceChildren(h("div",{class:"prog"},h("span",{},"一個月模擬"),h("span",{},(i+1)+" / "+sc.length)),
+      h("div",{class:"pbar"},h("i",{style:"width:"+i/sc.length*100+"%"})),
+      h("div",{class:"scene"},h("span",{class:"when"},"第 "+c.day+" 天"),h("p",{},c.t)),h("div",{class:"stack"},...opts),fb);
+  }
+  function done(){
+    const first=!(GP.sim>=0);saveG({sim:good});
+    endScreen("📅",first?"拿到「陪小月過一個月」徽章":"完成模擬","這個月你做了 "+good+" / "+sc.length+" 個好選擇。"+(good<sc.length?"想拿滿分可以再玩一次。":"小月很幸運有你陪她！"));
+  }
+  step();
+}
+function viewBadges(){
+  const got=earned(GP);
+  app.replaceChildren(
+    h("div",{class:"redeem"},h("div",{},"我已經收集"),h("b",{},got.length+" / "+BADGES.length),h("div",{class:"note",style:"margin:4px 0 0"},"衛教活動或校園擺攤時出示這一頁，可以兌換小禮物（依現場公告）")),
+    h("div",{class:"badges"},...BADGES.map(b=>{const on=b.test(GP);return h("div",{class:"bdg"+(on?"":" off"),"aria-label":b.name+(on?"，已獲得":"，尚未獲得")},h("div",{class:"bi","aria-hidden":"true"},b.icon),h("b",{},b.name),h("small",{},b.desc))})),
+    h("p",{class:"note",style:"margin-top:16px"},(syncNote||(liff?.isLoggedIn?.()?"":"從 LINE 打開時，徽章會和你的 LINE 帳號同步。"))+"遊戲進度不含任何經期或心情資料。"),
+    h("p",{style:"margin-top:16px"},h("a",{class:"link",href:"#game"},"去玩遊戲拿徽章 →")));
+}
+
+// ===== 路由 =====
+const TABS=["today","cycle","mood","map","game","badges"];
+async function route(){
+  const hs=location.hash.slice(1)||"today";
+  const tab=hs.startsWith("r-")?"map":["daily","sim","myth"].includes(hs)||hs.startsWith("lv-")?"game":TABS.includes(hs)?hs:"today";
+  for(const t of TABS){const a=document.getElementById("tab-"+t);if(t===tab)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")}
+  if(LIVE&&(tab==="map"||tab==="today")&&Date.now()-loadedAt>30e3){
+    if(!loadedAt)app.replaceChildren(h("p",{class:"note",style:"margin-top:24px"},"載入中…"));
+    await pull();
+    if((location.hash.slice(1)||"today")!==hs)return; // 載入時已換頁，交給新的 route
+  }
+  if(hs.startsWith("r-"))viewReport(hs.slice(2));
+  else if(hs.startsWith("lv-"))viewLevel(hs.slice(3));
+  else if(hs==="daily")viewDaily();
+  else if(hs==="sim")viewSim();
+  else if(hs==="myth")viewMyth();
+  else({today:viewToday,cycle:viewCycle,mood:viewMood,map:viewMap,game:viewGame,badges:viewBadges})[tab]();
+}
+tabFromQuery();
+addEventListener("hashchange",()=>{route();scrollTo(0,0)});route();
+initLiff().then(()=>{
+  const t=new URLSearchParams(location.search).get("tab"), cur=location.hash.slice(1);
+  if(t&&TABS.includes(t)&&(!cur||cur==="today")&&t!=="today")location.hash="#"+t;
+  else if(cur==="badges")route(); // 同步完更新徽章頁
+});
+// 停在地圖時每分鐘更新一次
+if(LIVE)setInterval(async()=>{if(location.hash==="#map"&&!document.hidden){await pull();if(location.hash==="#map")viewMap()}},60e3);
+</script>
+
+</body>
+</html>
