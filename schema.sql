@@ -19,3 +19,14 @@ CREATE TABLE IF NOT EXISTS progress (
   data TEXT    NOT NULL DEFAULT '{}',
   at   INTEGER NOT NULL
 );
+
+-- 每週摘要 Agent 的草稿。week 是產生當天的台北日期；status：draft（待負責人確認）→ published。
+-- 內容只來自補給回報與匿名遊戲統計。
+CREATE TABLE IF NOT EXISTS summaries (
+  week   TEXT    PRIMARY KEY,
+  text   TEXT    NOT NULL,
+  tools  TEXT    NOT NULL DEFAULT '[]',
+  model  TEXT    NOT NULL DEFAULT '',
+  at     INTEGER NOT NULL,
+  status TEXT    NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','published'))
+);
