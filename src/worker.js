@@ -6,10 +6,14 @@
 // - /api/config       給 LINE 內網頁（pal.html）的 LIFF ID
 // - /api/progress     科普遊戲進度：GET 讀取、PUT 合併寫入（需 LINE 登入的 ID token）
 // - /api/game-stats   遊戲統計（需 ?key=ADMIN_KEY）：玩家數與各徽章人數，給成效指標用
+// - /api/agent/weekly 手動跑一次每週摘要 Agent（需 ?key=ADMIN_KEY；加 &push=0 只看結果、不推播）
+// - /api/agent/stats  只看 Agent 會讀到的統計，不呼叫 AI（需 ?key=ADMIN_KEY）
+// - scheduled         每週一 09:00（台北）自動跑每週摘要 Agent，見 wrangler.toml 的 [triggers]
 import LOCS from "../public/locs.json";
 import GAME from "../public/game.json";
 import {LEVEL,KINDS,COOLDOWN_MIN,MIN,status,ago} from "../public/rules.js";
 import {BADGES,merge,taipeiDay,dailyQuestion} from "../public/game-rules.js";
+import {weeklySummary,supplyStats,gameStats as agentGameStats} from "./agent.js";
 
 const WINDOW_D=7;
 const DOT={full:"🟢",low:"🟡",empty:"🔴"};
@@ -27,10 +31,20 @@ export default {
     if(p==="/api/config"&&req.method==="GET")return json({liffId:env.LIFF_ID||""});
     if(p==="/api/progress"&&(req.method==="GET"||req.method==="PUT"))return progress(req,env);
     if(p==="/api/game-stats"&&req.method==="GET")return gameStats(url,env);
+    if(p==="/api/agent/weekly"&&req.method==="GET")return adminOnly(url,env,async()=>json(await weeklySummary(env,{push:url.searchParams.get("push")!=="0"})));
+    if(p==="/api/agent/stats"&&req.method==="GET")return adminOnly(url,env,async()=>json({supply:await supplyStats(env),game:await agentGameStats(env)}));
     if(p.startsWith("/api/"))return json({error:"not found"},404);
     return env.ASSETS.fetch(req);
+  },
+  async scheduled(event,env,ctx){
+    ctx.waitUntil(weeklySummary(env).then(r=>{if(r.error)console.error("weekly summary:",r.error)}));
   }
 };
+
+function adminOnly(url,env,fn){
+  if(!env.ADMIN_KEY||url.searchParams.get("key")!==env.ADMIN_KEY)return json({error:"需要正確的 key"},401);
+  return fn();
+}
 
 async function recent(env){
   const {results}=await env.DB.prepare("SELECT loc,lv,kinds,at FROM reports WHERE at>? ORDER BY at")

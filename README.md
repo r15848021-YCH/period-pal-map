@@ -18,7 +18,8 @@
 - [x] LINE Bot「今日一題」與遊戲進度同步
 - [ ] 科普題目請醫師或公衛老師審閱
 - [ ] 在 LINE Developers 建立 LIFF、設定圖文選單
-- [ ] Claude Agent：定時判斷狀態、通知補貨、產出每週摘要
+- [x] Claude Agent 第一步：每週一自動產出供需與識能摘要草稿（`src/agent.js`）
+- [ ] Claude Agent：LINE 自然語言查詢、矛盾回報裁決
 - [ ] 每週匿名統計匯出到本 repo 的 `data/`，作為公開紀錄
 
 ## 架構
@@ -43,6 +44,7 @@ LINE Bot ───────┘    （D1 資料庫）       └─ LINE 通知
 | `public/locs.json` | 補給點清單（網頁與 LINE Bot 共用） |
 | `public/rules.js` | 判斷規則（網頁與 LINE Bot 共用） |
 | `src/worker.js` | 回報 API、CSV 匯出、LINE Bot webhook |
+| `src/agent.js` | 每週摘要 Agent：程式算統計，Claude 用工具讀取後寫摘要草稿，推播給負責人確認 |
 | `schema.sql` | D1 資料表 |
 | `wrangler.toml` | Cloudflare 設定 |
 | `data/` | 每週匿名統計（之後由 Agent 自動寫入） |
@@ -132,3 +134,22 @@ npm run dev
 - 以最新一筆回報為準。
 - 一小時內有人說用完、有人說還有 → 標示「回報不一致」。
 - 超過 6 小時沒人回報 → 標示「待確認」。
+
+## 每週摘要 Agent
+
+每週一台北時間 09:00，Cloudflare 會自動啟動 `src/agent.js`：
+
+1. 程式先算好過去 7 天的統計（各點回報筆數、變成已用完的次數、估計缺貨小時、矛盾次數、最長無人回報時間；遊戲各關嘗試與過關人數）。數字都由程式算，AI 不會自己估。
+2. Claude 透過 `get_supply_stats`、`get_game_stats` 兩個工具讀取統計，寫出四段摘要：補給、識能、下週建議、需要人處理。
+3. 草稿存進 D1 的 `summaries` 資料表，並推播到負責人的 LINE。確認後才公開或轉給補貨窗口。
+
+Agent 讀不到任何經期或心情紀錄（那些只存在使用者手機）。
+
+第一次啟用：
+
+1. 在 Cloudflare 後台 D1 Console 執行 `schema.sql` 最後一段（建立 `summaries` 資料表），或 `npm run db:init`。
+2. `npx wrangler secret put ANTHROPIC_API_KEY`，貼上 Claude API 金鑰。
+3. （選填）`npx wrangler secret put LINE_OWNER_TO`，填自己的 LINE user ID；沒設會送到補貨群組。
+4. 部署後先試跑：打開 `/api/agent/stats?key=ADMIN_KEY` 看統計，再打開 `/api/agent/weekly?key=ADMIN_KEY&push=0` 看 AI 寫的摘要（不推播）。
+
+模型寫在 `wrangler.toml` 的 `AGENT_MODEL`，想省錢可以改成 `claude-haiku-5-5`。

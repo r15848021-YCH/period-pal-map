@@ -1,6 +1,6 @@
 // 判斷規則：網頁與 Worker（LINE Bot）共用這一份，改這裡兩邊一起生效
 export const LEVEL={full:{t:"充足",d:"盒內還有很多",cls:"s-full"},low:{t:"剩少量",d:"只剩幾片",cls:"s-low"},empty:{t:"已用完",d:"盒子是空的",cls:"s-empty"}};
-export const KINDS=["日用","夜用","護墊","棉條"];
+export const KINDS=["護墊","17.5cm","23cm"]; // 公衛大樓實際放的種類；舊回報裡的日用、夜用等仍保留在資料庫
 export const STALE_H=6, CONFLICT_MIN=60, COOLDOWN_MIN=5;
 export const MIN=60e3, H=60*MIN;
 
