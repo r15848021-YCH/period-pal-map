@@ -6,6 +6,7 @@
 <title>好朋友 Pal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="./sitemap.css">
 <style>
 html{-webkit-text-size-adjust:100%}body{margin:0}[hidden]{display:none!important}
 /* Layout: phone-first single column for the LINE in-app browser (LIFF); hash views 今天 / 經期 / 心情 / 地圖 / 遊戲 / 徽章
@@ -221,13 +222,14 @@ textarea.memo{font:inherit;width:100%;min-height:64px;padding:10px 12px;border-r
 <script type="module">
 import {LEVEL,KINDS,COOLDOWN_MIN,status as rule,ago} from "./rules.js";
 import {PASS,BADGES,earned,merge,taipeiDay,dailyQuestion} from "./game-rules.js";
+import {CAMPUS,siteCard,createSiteMap} from "./sitemap.js";
 // ===== 設定區 =====
 const CONFIG={
   // 回報與遊戲進度 API（Cloudflare Worker，與網頁同一個網站）。留空 = 示範模式，地圖只顯示示範資料
   apiUrl:"/api",
 };
-// 補給點清單（locs.json）、科普題庫（game.json）都和 LINE Bot 共用
-const [LOCS,GAME]=await Promise.all([fetch("./locs.json").then(r=>r.json()),fetch("./game.json").then(r=>r.json())]);
+// 補給點清單（locs.json）、科普題庫（game.json）都和 LINE Bot 共用；sites.json 是地圖上的站點（一棟樓一個標記）
+const [LOCS,GAME,SITES]=await Promise.all(["./locs.json","./game.json","./sites.json"].map(u=>fetch(u).then(r=>r.json())));
 const LIVE=!!CONFIG.apiUrl;
 // 經期與心情紀錄只存在這支手機；地圖的匿名代碼沿用好朋友地圖網頁的同一組，兩邊回報冷卻一致
 const HKEY="pal-health-v1", MKEY="periodpal-demo-v2", GKEY="pal-game-v1";
@@ -579,11 +581,25 @@ function viewMood(){
     h("p",{class:"note"},"如果低落、焦慮持續兩週以上，或有傷害自己的念頭，請找信任的人聊聊，或撥打安心專線 1925（24 小時）。"));
 }
 
-// ===== 補給地圖（總覽／回報／QR）=====
-let filter="all";
+// ===== 補給地圖（站點地圖／文字清單／回報）=====
+let filter="all", SM=null;
+const pickBox=h("div",{"aria-live":"polite"});
+const avail=s=>s.key==="full"||s.key==="low";
+function flash(el){if(!el)return;el.scrollIntoView({behavior:"smooth",block:"start"});el.classList.add("flash");setTimeout(()=>el.classList.remove("flash"),1600)}
+function renderPick(){
+  const s=SITES.find(x=>x.id===SM?.selected);
+  pickBox.replaceChildren(s?siteCard(s,{status,compact:true,onMore:x=>flash(document.getElementById("site-"+x.id))})
+    :h("p",{class:"sm-hint"},"點地圖上的標記看站點資訊。電腦上按住 Ctrl（Mac 是 ⌘）再滾動滑鼠來縮放；手機上用兩指移動地圖。右上角可以切換平面或立體。"));
+}
 function viewMap(){
+  SM??=createSiteMap(SITES,{status,onPick:renderPick});
   const st=LOCS.map(l=>({l,s:status(l.id)}));
   const n=k=>st.filter(x=>k.includes(x.s.key)).length;
+  const partners=SITES.filter(s=>!s.locs?.length);
+  const listHead=h("h2",{class:"sec",id:"site-list",tabindex:"-1"},"文字清單");
+  const campus=h("div",{class:"sm-campus"},...Object.entries(CAMPUS).map(([k,t])=>h("button",{class:"chipbtn","aria-pressed":String(SM.campus===k),
+    onclick:e=>{SM.view(k);campus.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b===e.currentTarget)))}},t)));
+  const sites=SITES.filter(s=>filter==="all"||!s.locs?.length||s.locs.some(id=>avail(status(id))));
   show(
     reports.some(r=>r.demo)?h("div",{class:"demo"},"地圖目前顯示示範資料。"):null,
     loadErr?h("div",{class:"demo"},"暫時連不上回報資料，畫面可能不是最新的。請稍後重新整理。"):null,
@@ -591,19 +607,28 @@ function viewMap(){
       h("div",{class:"stat"},h("b",{style:"color:var(--ok)"},String(n(["full","low"]))),h("small",{},"點有庫存")),
       h("div",{class:"stat"},h("b",{style:"color:var(--out)"},String(n(["empty"]))),h("small",{},"點已用完")),
       h("div",{class:"stat"},h("b",{style:"color:var(--unk)"},String(n(["stale","conflict","none"]))),h("small",{},"點待確認"))),
-    h("div",{class:"filters"},...[["all","全部地點"],["avail","只看有庫存"]].map(([k,t])=>h("button",{class:"chipbtn","aria-pressed":String(filter===k),onclick:()=>{filter=k;viewMap()}},t))),
-    ...groups(st.filter(x=>filter==="all"||["full","low"].includes(x.s.key))),
-    h("p",{class:"note",style:"margin-top:20px"},"在補給點旁掃 QR 碼也能回報。",h("a",{class:"link",href:"./#qr"},"各點 QR 碼"),"（給補貨窗口張貼用）"));
+    h("h2",{class:"sec"},"站點地圖"),
+    h("button",{class:"sm-skip",type:"button",onclick:()=>{listHead.scrollIntoView({behavior:"smooth"});listHead.focus({preventScroll:true})}},"不方便使用地圖？跳到文字清單 ↓"),
+    campus,SM.el,
+    h("div",{class:"sm-legend","aria-label":"圖例"},...[["s-full","有庫存"],["s-low","剩少量"],["s-empty","已用完"],["s-unk","待確認"],["s-partner","性工坊交換站（"+partners.length+" 處）"]].map(([c,t])=>h("span",{class:c},t))),
+    pickBox,
+    listHead,
+    h("div",{class:"filters",style:"margin-top:0"},...[["all","全部站點"],["avail","只看有庫存"]].map(([k,t])=>h("button",{class:"chipbtn","aria-pressed":String(filter===k),onclick:()=>{filter=k;viewMap()}},t))),
+    h("div",{class:"sites"},...sites.map(s=>siteCard(s,{status,floors:floorRows,onMap:x=>SM.focus(x.id)}))),
+    h("p",{class:"note",style:"margin-top:20px"},"性工坊交換站的資料取自性別平等工作坊的生理用品站點地圖，這些站點目前沒有即時回報，以現場為準。"),
+    h("p",{class:"note"},"在補給點旁掃 QR 碼也能回報。",h("a",{class:"link",href:"./#qr"},"各點 QR 碼"),"（給補貨窗口張貼用）"));
+  SM.attach();renderPick();
 }
-function groups(st){
-  if(!st.length)return[h("p",{class:"note"},"目前沒有回報有庫存的地點。可以切回「全部地點」看待確認的點。")];
-  const by={};st.forEach(x=>(by[x.l.bldg]??=[]).push(x));
-  return Object.entries(by).map(([b,xs])=>h("section",{class:"group"},h("h2",{},b+(xs[0].l.unit?"・"+xs[0].l.unit:"")),h("div",{class:"list"},...xs.sort((p,q)=>p.s.rank-q.s.rank).map(({l,s})=>
+// 一棟樓裡各樓層的即時狀態與回報按鈕
+function floorRows(site){
+  const xs=site.locs.map(id=>LOCS.find(l=>l.id===id)).filter(Boolean).map(l=>({l,s:status(l.id)})).filter(x=>filter==="all"||avail(x.s));
+  if(!xs.length)return h("p",{class:"note"},"這棟目前沒有回報有庫存的樓層。");
+  return h("div",{class:"list"},...xs.sort((p,q)=>p.s.rank-q.s.rank).map(({l,s})=>
     h("div",{class:"row "+s.cls},h("span",{class:"dot","aria-hidden":"true"}),
-      h("div",{class:"meta"},h("div",{class:"name"},l.spot),
-        h("div",{class:"sub"},s.rs.length?h("span",{class:"t"},ago(s.rs[0].at)):"還沒有人回報"," ・ "+l.src+"提供"),
+      h("div",{class:"meta"},h("div",{class:"name"},(l.bldg.replace(site.name,"").trim()+" "+l.spot).trim()),
+        h("div",{class:"sub"},s.rs.length?h("span",{class:"t"},ago(s.rs[0].at)):"還沒有人回報",l.unit&&l.unit!==l.src?" ・ "+l.unit:""),
         s.why?h("div",{class:"sub"},s.why):null),
-      h("div",{class:"row-right"},h("span",{class:"pill"},s.label),h("a",{class:"go",href:"#r-"+l.id},"回報")))))));
+      h("div",{class:"row-right"},h("span",{class:"pill"},s.label),h("a",{class:"go",href:"#r-"+l.id},"回報")))));
 }
 function viewReport(id){
   const l=LOCS.find(x=>x.id===id);

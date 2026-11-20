@@ -42,6 +42,8 @@ LINE Bot ───────┘    （D1 資料庫）       └─ LINE 通知
 | `public/game-rules.js` | 徽章條件、進度合併、今日一題（網頁與 LINE Bot 共用） |
 | `line/richmenu.png` | LINE 圖文選單圖片（2500×1686，四格） |
 | `public/locs.json` | 補給點清單（網頁與 LINE Bot 共用） |
+| `public/sites.json` | 地圖上的站點（一棟樓一個標記，含座標；性工坊交換站也在這裡） |
+| `public/sitemap.js`、`sitemap.css` | 站點地圖（MapLibre + OpenFreeMap，免費免金鑰）與站點卡片 |
 | `public/rules.js` | 判斷規則（網頁與 LINE Bot 共用） |
 | `src/worker.js` | 回報 API、CSV 匯出、LINE Bot webhook |
 | `src/agent.js` | 每週摘要 Agent：程式算統計，Claude 用工具讀取後寫摘要草稿，推播給負責人確認 |
@@ -112,6 +114,7 @@ npm run dev
 
 ## 要改設定的地方
 
+- `public/sites.json`：地圖標記。可即時回報的站點用 `locs` 列出它包含的 `locs.json` 樓層；沒有 `locs` 的是合作站點（例如性工坊交換站），只顯示資訊、不能回報。座標可以在 OpenStreetMap 上查。
 - `public/locs.json`：補給點清單。每個點的 `id` 會出現在 QR Code 網址裡（例如 `#r-cph-2f`），QR Code 貼出去後就不要再改。
 - `public/index.html` 的 `CONFIG.apiUrl`：回報 API 位置，預設 `/api`（同一個網站）。
 
