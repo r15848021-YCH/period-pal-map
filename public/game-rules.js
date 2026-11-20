@@ -1,6 +1,6 @@
 // 科普遊戲的徽章與進度規則：網頁與 Worker（LINE Bot 每日一題、進度同步）共用這一份
-// 進度格式：{done:{L1:true}, best:{L1:4}, sim:3, myth:8, reports:2, days:["2026-10-26"]}
-//   done/best 闖關是否過關與最高答對題數；sim 模擬最佳選擇數（-1 = 沒玩過）；myth 迷思最高答對數；
+// 進度格式：{done:{L1:true,bf:true}, best:{L1:4,bf:7}, sim:3, myth:8, reports:2, days:["2026-10-26"]}
+//   done/best 闖關與難度挑戰（bf/self/bio）是否過關與最高答對題數；sim 模擬最佳選擇數（-1 = 沒玩過）；myth 迷思最高答對數；
 //   reports 回報補給點次數；days 在 LINE 回答「今日一題」的日期（最多留 60 天）
 export const PASS=3;
 export const BADGES=[
@@ -9,6 +9,9 @@ export const BADGES=[
   {id:"L3",icon:"🧺",name:"用品專家",desc:"通過「生理用品怎麼選」",test:p=>!!p.done?.L3},
   {id:"L4",icon:"🏃",name:"生活高手",desc:"通過「經期生活」",test:p=>!!p.done?.L4},
   {id:"L5",icon:"🤝",name:"好朋友",desc:"通過「站在朋友旁邊」",test:p=>!!p.done?.L5},
+  {id:"bf",icon:"💑",name:"貼心另一半",desc:"通過入門挑戰「男朋友」",test:p=>!!p.done?.bf},
+  {id:"self",icon:"🌱",name:"照顧自己",desc:"通過中級挑戰「自我照顧」",test:p=>!!p.done?.self},
+  {id:"bio",icon:"🧬",name:"生物小博士",desc:"通過進階挑戰「高中選修生物」",test:p=>!!p.done?.bio},
   {id:"sim",icon:"📅",name:"陪小月過一個月",desc:"完成一個月模擬",test:p=>(p.sim??-1)>=0},
   {id:"myth",icon:"🔍",name:"迷思破解王",desc:"迷思是真是假 10 題全對",test:p=>(p.myth||0)>=10},
   {id:"report",icon:"🗺️",name:"補給守護者",desc:"在地圖回報一次補給點狀況",test:p=>(p.reports||0)>=1},

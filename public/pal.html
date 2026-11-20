@@ -656,6 +656,9 @@ function viewGame(){
     h("h2",{class:"sec"},"好朋友闖關"),
     h("div",{class:"lvlist"},...lv.map((l,i)=>{const locked=i>0&&!GP.done[lv[i-1].id]&&!GP.done[l.id];
       return gcard("#lv-"+l.id,locked?"🔒":BADGES.find(b=>b.id===l.id).icon,"第 "+(i+1)+" 關・"+l.name,locked?"先通過上一關就能解鎖":l.intro,GP.done[l.id]?"✓ "+GP.best[l.id]+"/"+l.qs.length:null,locked)})),
+    h("h2",{class:"sec"},"難度挑戰"),
+    h("p",{class:"note",style:"margin:-4px 0 10px"},"選一個適合你的主題，每題答完都有解說。"),
+    h("div",{class:"lvlist"},...GAME.tracks.map(t=>gcard("#tr-"+t.id,t.icon,t.level+"・"+t.name,t.intro,GP.done[t.id]?"✓ "+GP.best[t.id]+"/"+t.qs.length:null))),
     h("h2",{class:"sec"},"更多玩法"),
     h("div",{class:"lvlist"},
       gcard("#sim","📅","一個月模擬","陪小月過完一個週期，遇到狀況時你會怎麼做？",GP.sim>=0?"✓ "+GP.sim+"/"+GAME.sim.length:null),
@@ -697,6 +700,19 @@ function viewLevel(id){
     endScreen(pass?b.icon:"💪",pass?(first?"過關！拿到「"+b.name+"」徽章":"過關！"):"差一點",
       "答對 "+score+" / "+l.qs.length+" 題"+(pass?"。":"，答對 "+PASS+" 題就能過關，再試一次吧。"),
       pass&&nx?h("p",{style:"text-align:center"},h("a",{class:"link",href:"#lv-"+nx.id},"下一關：「"+nx.name+"」 →")):null);
+  }});
+}
+// 難度挑戰：不用解鎖，直接選主題
+function viewTrack(id){
+  const t=GAME.tracks.find(x=>x.id===id);
+  if(!t){location.hash="#game";return}
+  quizRun(t.qs,{title:t.level+"・"+t.name,onEnd:score=>{
+    const pass=score>=t.pass, first=pass&&!GP.done[id];
+    saveG({best:{[id]:score},done:pass?{[id]:true}:{}});
+    const b=BADGES.find(x=>x.id===id), others=GAME.tracks.filter(x=>x.id!==id&&!GP.done[x.id]);
+    endScreen(pass?b.icon:"💪",pass?(first?"過關！拿到「"+b.name+"」徽章":"過關！"):"差一點",
+      "答對 "+score+" / "+t.qs.length+" 題"+(pass?"。":"，答對 "+t.pass+" 題就能過關，再試一次吧。"),
+      pass&&others.length?h("p",{style:"text-align:center"},h("a",{class:"link",href:"#tr-"+others[0].id},"挑戰下一個主題：「"+others[0].name+"」 →")):null);
   }});
 }
 function viewDaily(){
@@ -775,7 +791,7 @@ function viewBadges(){
 const TABS=["today","cycle","mood","map","game","badges"];
 async function route(){
   const hs=location.hash.slice(1)||"today";
-  const tab=hs.startsWith("r-")?"map":["daily","sim","myth"].includes(hs)||hs.startsWith("lv-")?"game":TABS.includes(hs)?hs:"today";
+  const tab=hs.startsWith("r-")?"map":["daily","sim","myth"].includes(hs)||hs.startsWith("lv-")||hs.startsWith("tr-")?"game":TABS.includes(hs)?hs:"today";
   for(const t of TABS){const a=document.getElementById("tab-"+t);if(t===tab)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")}
   if(LIVE&&(tab==="map"||tab==="today")&&Date.now()-loadedAt>30e3){
     if(!loadedAt)show(h("p",{class:"note",style:"margin-top:24px"},"載入中…"));
@@ -784,6 +800,7 @@ async function route(){
   }
   if(hs.startsWith("r-"))viewReport(hs.slice(2));
   else if(hs.startsWith("lv-"))viewLevel(hs.slice(3));
+  else if(hs.startsWith("tr-"))viewTrack(hs.slice(3));
   else if(hs==="daily")viewDaily();
   else if(hs==="sim")viewSim();
   else if(hs==="myth")viewMyth();

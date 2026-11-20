@@ -38,7 +38,7 @@ LINE Bot ───────┘    （D1 資料庫）       └─ LINE 通知
 | --- | --- |
 | `public/index.html` | 好朋友地圖網頁（掃 QR Code 回報、各點 QR 碼） |
 | `public/pal.html` | 好朋友 Pal：在 LINE 裡打開的整合頁（今天／經期／心情／地圖／遊戲／徽章） |
-| `public/game.json` | 科普題庫：五關問答、迷思是真是假、一個月模擬（網頁與 LINE Bot 共用） |
+| `public/game.json` | 科普題庫：五關問答、三種難度挑戰（男朋友／自我照顧／高中選修生物）、迷思是真是假、一個月模擬（網頁與 LINE Bot 共用） |
 | `public/game-rules.js` | 徽章條件、進度合併、今日一題（網頁與 LINE Bot 共用） |
 | `line/richmenu.png` | LINE 圖文選單圖片（2500×1686，四格） |
 | `public/locs.json` | 補給點清單（網頁與 LINE Bot 共用） |
