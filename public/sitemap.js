@@ -5,6 +5,7 @@ const ML="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl";
 const STYLE={light:"https://tiles.openfreemap.org/styles/positron",dark:"https://tiles.openfreemap.org/styles/dark"};
 export const CAMPUS={all:"全部站點",main:"校總區",med:"醫學院區"};
 const PITCH=50;
+import {ago} from "./rules.js";
 
 function h(tag,attrs={},...kids){const e=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(v==null)continue;if(k==="class")e.className=v;else if(k.startsWith("on"))e.addEventListener(k.slice(2),v);else e.setAttribute(k,v)}for(const k of kids.flat())if(k!=null)e.append(k);return e}
 
@@ -23,15 +24,17 @@ function loadLib(){
 export function siteState(site,status){
   if(!site.locs?.length)return{cls:"s-partner",label:site.src+"・"+site.form,live:false};
   const ss=site.locs.map(status), ok=ss.filter(s=>s.key==="full"||s.key==="low").length;
-  if(ok)return{cls:ss.some(s=>s.key==="full")?"s-full":"s-low",label:ok+"/"+ss.length+" 層有庫存",live:true};
-  if(ss.every(s=>s.key==="empty"))return{cls:"s-empty",label:"全部用完",live:true};
-  return{cls:"s-unk",label:"待確認",live:true};
+  const last=Math.max(0,...ss.map(s=>s.rs[0]?.at||0))||null; // 這棟樓最後一次有人回報的時間
+  if(ss.length===1&&ss[0].key!=="none")return{cls:ss[0].cls,label:ss[0].label,live:true,last};
+  if(ok)return{cls:ss.some(s=>s.key==="full")?"s-full":"s-low",label:ok+"/"+ss.length+" 層有庫存",live:true,last};
+  if(ss.every(s=>s.key==="empty"))return{cls:"s-empty",label:"全部用完",live:true,last};
+  return{cls:"s-unk",label:"待確認",live:true,last};
 }
 
 // 站點卡片。compact = 地圖下方「目前選取」的精簡版；floors(site) 由頁面提供各樓層回報列
 export function siteCard(site,{status,floors,compact=false,onMap,onMore}){
   const st=siteState(site,status);
-  const rows=[["形式",site.form],["時間",site.hours],["合作",site.partner],["提供",site.src]].filter(([,v])=>v);
+  const rows=[["最後回報",st.live?(st.last?ago(st.last):"還沒有人回報"):null],["形式",site.form],["時間",site.hours],["合作",site.partner],["提供",site.src]].filter(([,v])=>v);
   return h("article",{class:"site"+(compact?" compact":""),id:compact?null:"site-"+site.id},
     h("div",{class:"site-head"},h("h3",{},site.name),h("span",{class:"pill "+st.cls},st.label)),
     h("p",{class:"site-where"},site.where),

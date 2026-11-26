@@ -360,13 +360,8 @@ function insights(ci){
 
 // ===== 補給地圖（與好朋友地圖網頁共用同一個 API 與規則）=====
 function seedMap(){const n=Date.now();return[
-  {loc:"cph-1f",lv:"full",at:n-15*MIN},{loc:"cph-1f",lv:"full",at:n-3*H},
-  {loc:"cph-2f",lv:"empty",at:n-40*MIN},
-  {loc:"cph-3f",lv:"low",at:n-25*MIN},{loc:"cph-3f",lv:"full",at:n-5*H},
-  {loc:"cph-4f",lv:"empty",at:n-20*MIN},{loc:"cph-4f",lv:"full",at:n-35*MIN},
-  {loc:"cph-5f",lv:"full",at:n-9*H},
-  {loc:"cph-6f",lv:"full",at:n-50*MIN},
-  {loc:"cph-7f",lv:"low",at:n-70*MIN}
+  {loc:"cph-6f",lv:"full",at:n-50*MIN},{loc:"cph-6f",lv:"empty",at:n-3*H},
+  {loc:"medlib-2f",lv:"low",at:n-25*MIN},{loc:"medlib-2f",lv:"full",at:n-5*H}
 ].map(r=>({...r,demo:true}))}
 let reports=LIVE?[]:seedMap(), loadedAt=0, loadErr=false;
 let device;try{device=localStorage.getItem(MKEY+"-device")}catch(e){}
@@ -463,7 +458,7 @@ function viewToday(){
   const st=LOCS.map(l=>({l,s:status(l.id)})),avail=st.filter(x=>["full","low"].includes(x.s.key));
   const near=!ci.none&&(ci.inPeriod||(ci.toNext>=0&&ci.toNext<=3)||ci.toNext<0);
   const supply=h("a",{class:"card supply",href:"#map",style:"text-decoration:none;color:inherit"},
-    h("div",{style:"min-width:0"},h("div",{style:"font-weight:700"},near?"快到了，先看看哪裡有":"公衛學院大樓補給點"),
+    h("div",{style:"min-width:0"},h("div",{style:"font-weight:700"},near?"快到了，先看看哪裡有":"可回報的補給點"),
       h("div",{class:"note",style:"margin:0"},avail.length?"最近有庫存："+avail.sort((a,b)=>a.s.rank-b.s.rank).slice(0,3).map(x=>x.l.bldg).join("、"):"目前沒有回報有庫存的樓層")),
     h("div",{style:"text-align:right;flex:none"},h("b",{},String(avail.length)),h("div",{class:"note",style:"margin:0"},"/ "+LOCS.length+" 點有庫存")));
   // 回顧
@@ -626,7 +621,7 @@ function floorRows(site){
   return h("div",{class:"list"},...xs.sort((p,q)=>p.s.rank-q.s.rank).map(({l,s})=>
     h("div",{class:"row "+s.cls},h("span",{class:"dot","aria-hidden":"true"}),
       h("div",{class:"meta"},h("div",{class:"name"},(l.bldg.replace(site.name,"").trim()+" "+l.spot).trim()),
-        h("div",{class:"sub"},s.rs.length?h("span",{class:"t"},ago(s.rs[0].at)):"還沒有人回報",l.unit&&l.unit!==l.src?" ・ "+l.unit:""),
+        h("div",{class:"sub"},s.rs.length?h("span",{class:"t"},"最後回報 "+ago(s.rs[0].at)):"還沒有人回報",l.unit&&l.unit!==l.src?" ・ "+l.unit:""),
         s.why?h("div",{class:"sub"},s.why):null),
       h("div",{class:"row-right"},h("span",{class:"pill"},s.label),h("a",{class:"go",href:"#r-"+l.id},"回報")))));
 }

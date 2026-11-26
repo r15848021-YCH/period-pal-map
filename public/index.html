@@ -100,7 +100,7 @@ nav.tabs a:focus-visible,button:focus-visible,input:focus-visible{outline:2px so
 
 
 <header class="top"><div class="wrap">
-  <div class="brand"><h1 id="app-name">好朋友地圖</h1><span>公衛學院大樓 1–7 樓・掃碼回報生理用品</span></div>
+  <div class="brand"><h1 id="app-name">好朋友地圖</h1><span>公衛學院 6 樓健管所・醫學圖書館 2 樓・掃碼回報生理用品</span></div>
   <nav class="tabs">
     <a href="#map" id="tab-map">即時總覽</a>
     <a href="#qr" id="tab-qr">各點 QR 碼</a>
@@ -122,13 +122,8 @@ const LIVE=!!CONFIG.apiUrl;
 const KEY="periodpal-demo-v2";
 
 function seed(){const n=Date.now();return[
-  {loc:"cph-1f",lv:"full",at:n-15*MIN},{loc:"cph-1f",lv:"full",at:n-3*H},
-  {loc:"cph-2f",lv:"empty",at:n-40*MIN},
-  {loc:"cph-3f",lv:"low",at:n-25*MIN},{loc:"cph-3f",lv:"full",at:n-5*H},
-  {loc:"cph-4f",lv:"empty",at:n-20*MIN},{loc:"cph-4f",lv:"full",at:n-35*MIN},
-  {loc:"cph-5f",lv:"full",at:n-9*H},
-  {loc:"cph-6f",lv:"full",at:n-50*MIN},
-  {loc:"cph-7f",lv:"low",at:n-70*MIN}
+  {loc:"cph-6f",lv:"full",at:n-50*MIN},{loc:"cph-6f",lv:"empty",at:n-3*H},
+  {loc:"medlib-2f",lv:"low",at:n-25*MIN},{loc:"medlib-2f",lv:"full",at:n-5*H}
 ].map(r=>({...r,demo:true}))}
 let reports=[];
 if(!LIVE){try{reports=JSON.parse(localStorage.getItem(KEY))}catch(e){}
@@ -177,7 +172,7 @@ function groups(st){
     .map(([b,xs])=>h("section",{class:"group"},h("h2",{},b+(xs[0].l.unit?"・"+xs[0].l.unit:"")),h("div",{class:"list"},...xs.sort((p,q)=>p.s.rank-q.s.rank).map(({l,s})=>
       h("div",{class:"row "+s.cls},h("span",{class:"dot","aria-hidden":"true"}),
         h("div",{class:"meta"},h("div",{class:"name"},l.spot),
-          h("div",{class:"sub"},s.rs.length?h("span",{class:"t"},ago(s.rs[0].at)):"還沒有人回報"," ・ "+l.src+"提供"),
+          h("div",{class:"sub"},s.rs.length?h("span",{class:"t"},"最後回報 "+ago(s.rs[0].at)):"還沒有人回報"," ・ "+l.src+"提供"),
           s.why?h("div",{class:"sub"},s.why):null),
         h("div",{class:"row-right"},h("span",{class:"pill"},s.label),h("a",{class:"go",href:"#r-"+l.id},"回報")))))));
 }
