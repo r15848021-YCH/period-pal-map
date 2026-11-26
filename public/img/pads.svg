@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 330" font-family="Noto Sans TC,PingFang TC,Microsoft JhengHei,sans-serif">
+<rect width="640" height="330" rx="16" fill="#fff"/>
+<text x="24" y="38" font-size="20" font-weight="700" fill="#231c2b">衛生棉不是只有一種</text>
+<text x="24" y="62" font-size="14" fill="#6c6375">長度、厚度、有沒有翅膀都不一樣</text>
+<line x1="40" y1="270" x2="600" y2="270" stroke="#e3dde8" stroke-width="2"/>
+<g fill="#f5e6ef" stroke="#cf7fa5" stroke-width="2">
+<rect x="100" y="180" width="56" height="90" rx="28"/>
+<ellipse cx="300" cy="210" rx="58" ry="20"/>
+<rect x="272" y="140" width="56" height="130" rx="28"/>
+<ellipse cx="480" cy="190" rx="58" ry="20"/>
+<path d="M452 112 a28 28 0 0 1 56 0 v122 q0 36 -28 36 q-28 0 -28 -36z"/>
+</g>
+<g fill="none" stroke="#cf7fa5" stroke-width="1.5" stroke-dasharray="4 4">
+<rect x="110" y="194" width="36" height="62" rx="18"/><rect x="282" y="154" width="36" height="102" rx="18"/><path d="M462 116 a18 18 0 0 1 36 0 v116 q0 26 -18 26 q-18 0 -18 -26z"/>
+</g>
+<g font-size="18" font-weight="700" fill="#231c2b" text-anchor="middle">
+<text x="128" y="300">護墊</text><text x="300" y="300">日用</text><text x="480" y="300">夜用</text>
+</g>
+<g font-size="13" fill="#6c6375" text-anchor="middle">
+<text x="128" y="320">最短最薄</text><text x="300" y="320">白天、量中等</text><text x="480" y="320">最長，晚上睡覺用</text>
+</g>
+</svg>
