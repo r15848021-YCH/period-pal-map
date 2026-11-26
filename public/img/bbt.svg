@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 340" font-family="Noto Sans TC,PingFang TC,Microsoft JhengHei,sans-serif">
+<rect width="640" height="340" rx="16" fill="#fff"/>
+<text x="24" y="38" font-size="20" font-weight="700" fill="#231c2b">小安的基礎體溫紀錄</text>
+<g stroke="#e3dde8" stroke-width="1">
+<line x1="80" y1="90" x2="610" y2="90"/><line x1="80" y1="150" x2="610" y2="150"/><line x1="80" y1="210" x2="610" y2="210"/><line x1="80" y1="270" x2="610" y2="270"/>
+</g>
+<g font-size="14" fill="#6c6375" text-anchor="end">
+<text x="70" y="95">37.0</text><text x="70" y="155">36.8</text><text x="70" y="215">36.6</text><text x="70" y="275">36.4</text>
+</g>
+<text x="24" y="70" font-size="13" fill="#6c6375">°C</text>
+<rect x="80" y="74" width="246" height="212" fill="#f5e6ef" opacity=".55"/>
+<polyline fill="none" stroke="#8a2f62" stroke-width="3" stroke-linejoin="round"
+ points="80,270 98,266 116,272 134,268 152,270 170,274 188,268 206,271 224,267 242,272 260,269 278,270 296,266 314,272 332,150 350,154 368,147 386,151 404,148 422,152 440,149 458,153 476,147 494,150 512,152 530,148 548,151 566,150 584,270 602,268"/>
+<g font-size="14" fill="#6c6375" text-anchor="middle">
+<text x="80" y="306">1</text><text x="314" y="306">14</text><text x="332" y="324">15</text><text x="566" y="306">28</text><text x="600" y="324">下次月經</text>
+</g>
+<text x="345" y="324" font-size="13" fill="#6c6375" text-anchor="start">＝週期第幾天</text>
+<text x="200" y="250" font-size="14" fill="#8a2f62" text-anchor="middle">月經＋前半段</text>
+</svg>
