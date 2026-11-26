@@ -183,6 +183,9 @@ textarea.memo{font:inherit;width:100%;min-height:64px;padding:10px 12px;border-r
 .fb b{display:block;margin-bottom:4px}
 .fb.ok b{color:var(--ok)} .fb.no b{color:var(--out)}
 .fb .ref{display:block;margin-top:8px;font-size:12px;color:var(--muted)}
+.chat{margin-top:16px;padding:14px;border-radius:16px;background:var(--surface);border:1px solid var(--line);display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+.chat .who{font-size:12px;color:var(--muted);font-weight:700}
+.chat .bub{margin:0;max-width:88%;padding:9px 13px;border-radius:4px 16px 16px 16px;background:var(--accent-soft);font-size:16px;text-wrap:pretty}
 .myth{margin-top:16px;padding:28px 20px;border-radius:16px;background:var(--surface);border:1px solid var(--line);font-size:20px;font-weight:700;text-align:center;min-height:140px;display:grid;place-items:center;text-wrap:balance}
 .tf{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
 .tf button{font:inherit;font-size:18px;font-weight:700;padding:14px;border-radius:12px;border:2px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
@@ -707,6 +710,8 @@ function quizRun(qs,{title,onEnd}){
     show(
       h("div",{class:"prog"},h("span",{},title),h("span",{},(i+1)+" / "+qs.length)),
       h("div",{class:"pbar"},h("i",{style:"width:"+i/qs.length*100+"%"})),
+      // 對話情境題：先顯示對方傳來的訊息，再問「你會怎麼回？」
+      q.chat?h("div",{class:"chat","aria-label":q.chat.who+"傳來的訊息"},h("span",{class:"who"},q.chat.who),...q.chat.msgs.map(m=>h("p",{class:"bub"},m))):null,
       h("p",{class:"qtext"},q.q),h("div",{class:"stack"},...opts),fb);
   }
   step();
