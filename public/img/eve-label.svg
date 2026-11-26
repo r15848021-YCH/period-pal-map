@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 380" font-family="Noto Sans TC,PingFang TC,Microsoft JhengHei,sans-serif">
+<rect width="640" height="380" rx="16" fill="#fff"/>
+<rect x="20" y="20" width="600" height="340" rx="10" fill="#fbfaf7" stroke="#c9c2cf" stroke-width="2" stroke-dasharray="6 5"/>
+<text x="44" y="60" font-size="15" fill="#6c6375">盒子背面（中文翻譯）</text>
+<text x="44" y="96" font-size="22" font-weight="900" fill="#231c2b">用法・用量</text>
+<g font-size="17" fill="#231c2b">
+<text x="44" y="134">・15 歲以上：1 次 2 錠，1 日最多 3 次</text>
+<text x="44" y="164">・服藥間隔 4 小時以上，盡量避免空腹服用</text>
+<text x="44" y="194">・未滿 15 歲：不可服用</text>
+</g>
+<text x="44" y="236" font-size="22" font-weight="900" fill="#b3261e">注意事項</text>
+<g font-size="17" fill="#231c2b">
+<text x="44" y="272">・服用期間不可併用其他止痛藥、感冒藥、鎮靜藥、暈車藥</text>
+<text x="44" y="302">・服藥前後不可飲酒；服藥後不可開車（可能想睡）</text>
+<text x="44" y="332">・服用 5 到 6 次仍未改善，請停藥並諮詢醫師或藥師</text>
+</g>
+</svg>
