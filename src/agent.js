@@ -6,7 +6,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import LOCS from "../public/locs.json";
 import GAME from "../public/game.json";
-import {LEVEL,CONFLICT_MIN,MIN,H} from "../public/rules.js";
+import {LEVEL,H,conflictWith} from "../public/rules.js";
 import {BADGES,taipeiDay} from "../public/game-rules.js";
 
 const WEEK=7*24*H;
@@ -27,8 +27,7 @@ export async function supplyStats(env,now=Date.now()){
     rs.forEach((r,i)=>{
       if(state==="empty")emptyMs+=r.at-t;
       if(r.lv==="empty"&&state!=="empty")episodes++;
-      const p=rs[i-1];
-      if(p&&p.lv!==r.lv&&r.at-p.at<CONFLICT_MIN*MIN&&(p.lv==="empty")!==(r.lv==="empty"))conflicts++;
+      if(conflictWith(rs.slice(0,i+1).reverse()))conflicts++; // 和地圖同一條規則
       if(last)maxGap=Math.max(maxGap,r.at-Math.max(last,since));
       if(r.lv!=="full")for(const k of safeKinds(r.kinds))kinds[k]=(kinds[k]||0)+1;
       state=r.lv;t=r.at;last=r.at;
@@ -92,7 +91,11 @@ const SYSTEM=`你是「好朋友 Pal」的每週摘要助理。好朋友 Pal 是
   【需要人處理】有矛盾回報、長時間沒人回報或目前顯示已用完的地點，請負責人實地確認；沒有就寫「無」。`;
 
 export async function weeklySummary(env,{push=true,now=Date.now()}={}){
-  if(!env.ANTHROPIC_API_KEY)return{error:"沒有設定 ANTHROPIC_API_KEY"};
+  if(!env.ANTHROPIC_API_KEY){
+    // 沒設金鑰時，排程會默默跳過；改成通知負責人，才不會像 11/23 一樣沒跑也沒人知道
+    if(push)await notify(env,"⚠️ 好朋友 Pal 每週摘要這週沒有執行：Cloudflare 上還沒設定 ANTHROPIC_API_KEY。\n設定方式：npx wrangler secret put ANTHROPIC_API_KEY");
+    return{error:"沒有設定 ANTHROPIC_API_KEY"};
+  }
   const client=new Anthropic({apiKey:env.ANTHROPIC_API_KEY});
   const run={get_supply_stats:()=>supplyStats(env,now),get_game_stats:()=>gameStats(env,now)};
   const messages=[{role:"user",content:"請寫本週（"+taipeiDay(now-WEEK)+" 至 "+taipeiDay(now)+"）的摘要草稿。"}];
@@ -122,6 +125,8 @@ export async function weeklySummary(env,{push=true,now=Date.now()}={}){
   const text=res.content.filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
   if(!text)return{error:"沒有產生摘要（停止原因："+res.stop_reason+"）",trace};
   const week=taipeiDay(now);
+  // D1 上若還沒建 summaries 表（schema.sql 是後來才加的），先建起來，避免寫入失敗、草稿白做
+  await env.DB.prepare("CREATE TABLE IF NOT EXISTS summaries (week TEXT PRIMARY KEY, text TEXT NOT NULL, tools TEXT NOT NULL DEFAULT '[]', model TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','published')))").run();
   await env.DB.prepare("INSERT INTO summaries (week,text,tools,model,at,status) VALUES (?,?,?,?,?,'draft') ON CONFLICT(week) DO UPDATE SET text=excluded.text,tools=excluded.tools,model=excluded.model,at=excluded.at,status='draft'")
     .bind(week,text,JSON.stringify(trace),res.model,now).run();
   if(push)await notify(env,"📋 好朋友 Pal 每週摘要草稿（"+week+"）\n\n"+text+"\n\n這是 AI 草稿，確認內容正確後再公開或轉給補貨窗口。");

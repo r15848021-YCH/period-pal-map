@@ -11,7 +11,7 @@
 // - scheduled         每週一 09:00（台北）自動跑每週摘要 Agent，見 wrangler.toml 的 [triggers]
 import LOCS from "../public/locs.json";
 import GAME from "../public/game.json";
-import {LEVEL,KINDS,COOLDOWN_MIN,MIN,status,ago} from "../public/rules.js";
+import {LEVEL,KINDS,COOLDOWN_MIN,MIN,status,shouldNotify,ago} from "../public/rules.js";
 import {BADGES,merge,taipeiDay,dailyQuestion} from "../public/game-rules.js";
 import {weeklySummary,supplyStats,gameStats as agentGameStats} from "./agent.js";
 
@@ -46,8 +46,9 @@ function adminOnly(url,env,fn){
   return fn();
 }
 
+// 最近 7 天的回報，再加上每個地點最後一筆（就算超過 7 天），地圖才能顯示「8 天前」而不是「還沒有人回報」
 async function recent(env){
-  const {results}=await env.DB.prepare("SELECT loc,lv,kinds,at FROM reports WHERE at>? ORDER BY at")
+  const {results}=await env.DB.prepare("SELECT loc,lv,kinds,at FROM reports WHERE at>? OR at=(SELECT MAX(at) FROM reports r2 WHERE r2.loc=reports.loc) ORDER BY at")
     .bind(Date.now()-WINDOW_D*24*60*MIN).all();
   return results.map(r=>({...r,kinds:JSON.parse(r.kinds)}));
 }
@@ -59,7 +60,7 @@ async function postReport(req,env,ctx){
   return json(r.error?{error:r.error}:{ok:true,report:r.report},r.status||200);
 }
 
-// 網頁與 LINE 共用的寫入流程：檢查 → 5 分鐘冷卻 → 寫入 → 剛變成「已用完」就通知補貨群組
+// 網頁與 LINE 共用的寫入流程：檢查 → 5 分鐘冷卻 → 寫入 → 剛變成「已用完」就通知補貨群組（規則在 public/rules.js）
 async function addReport(env,ctx,{loc,lv,kinds,device,via}){
   const l=LOCS.find(x=>x.id===loc);
   if(!l)return{error:"找不到這個地點",status:400};
@@ -69,10 +70,10 @@ async function addReport(env,ctx,{loc,lv,kinds,device,via}){
   const dup=await env.DB.prepare("SELECT 1 FROM reports WHERE device=? AND loc=? AND at>? LIMIT 1")
     .bind(device,loc,now-COOLDOWN_MIN*MIN).first();
   if(dup)return{error:"你剛剛回報過這裡，"+COOLDOWN_MIN+" 分鐘後可以再回報。",status:429};
-  const prev=await env.DB.prepare("SELECT lv FROM reports WHERE loc=? ORDER BY at DESC LIMIT 1").bind(loc).first();
+  const {results:prev}=await env.DB.prepare("SELECT lv,at FROM reports WHERE loc=? ORDER BY at DESC LIMIT 1").bind(loc).all();
   await env.DB.prepare("INSERT INTO reports (loc,lv,kinds,at,device,via) VALUES (?,?,?,?,?,?)")
     .bind(loc,lv,JSON.stringify(kinds),now,device,via).run();
-  if(lv==="empty"&&prev?.lv!=="empty")
+  if(shouldNotify(prev,lv,now))
     ctx.waitUntil(linePush(env,"🔴 "+l.bldg+" "+l.spot+" 有人回報已用完，請協助補貨。\n補完後掃同一張 QR Code（或在 LINE 回報）選「充足」就完成標記。"));
   return{report:{loc,lv,kinds,at:now}};
 }
@@ -143,7 +144,7 @@ async function lineWebhook(req,env,ctx,origin){
 
 async function handleEvent(ev,env,ctx,origin){
   const inGroup=ev.source?.type==="group"||ev.source?.type==="room";
-  if(ev.type==="follow")return[text("你好！我是好朋友 Pal 🌙\n\n・找補給：查公衛學院大樓 1 到 7 樓哪裡有生理用品，也可以直接在這裡回報\n・我的紀錄：經期與心情，資料只存在你的手機\n・科普遊戲：闖關、一個月模擬、迷思是真是假\n\n點下方選單開始，或傳「今日一題」試試看。",menuQuick(env,origin))];
+  if(ev.type==="follow")return[text("你好！我是好朋友 Pal 🌙\n\n・找補給：查公衛學院 6 樓健管所、醫學圖書館 2 樓還有沒有生理用品，也可以直接在這裡回報\n・我的紀錄：經期與心情，資料只存在你的手機\n・科普遊戲：闖關、一個月模擬、迷思是真是假\n\n點下方選單開始，或傳「今日一題」試試看。",menuQuick(env,origin))];
   if(ev.type==="join")return[text("大家好！之後補給點被回報用完時，我會在這個群組通知。\n請管理者傳「群組ID」給我，把回覆的 ID 設定到 LINE_STAFF_TO。")];
   if(ev.type==="message"&&ev.message.type==="text"){
     const t=ev.message.text.trim();
@@ -170,8 +171,8 @@ async function handleEvent(ev,env,ctx,origin){
 
 async function summary(env,origin){
   const rs=await recent(env), now=Date.now();
-  const lines=LOCS.map(l=>{const s=status(rs,l.id,now);return(DOT[s.key]||"⚪")+" "+l.bldg+" "+l.spot+"："+s.label+(s.rs.length?"（"+ago(s.rs[0].at,now)+"）":"")});
-  return text("公衛學院大樓生理用品現況\n\n"+lines.join("\n")+"\n\n⚪ 代表待確認或還沒人回報\n網頁版："+origin+"/",quick());
+  const lines=LOCS.map(l=>{const s=status(rs,l.id,now);return(DOT[s.key]||"⚪")+" "+l.bldg+" "+l.spot+"："+s.label+"（"+(s.rs.length?"最後回報 "+ago(s.rs[0].at,now):"還沒有人回報")+"）"});
+  return text("好朋友 Pal 補給點現況\n\n"+lines.join("\n")+"\n\n⚪ 代表待確認或還沒人回報\n網頁版："+origin+"/",quick());
 }
 
 const text=(t,quickReply)=>quickReply?{type:"text",text:t,quickReply}:{type:"text",text:t};
